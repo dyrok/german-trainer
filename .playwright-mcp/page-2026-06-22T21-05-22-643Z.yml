@@ -1,0 +1,33 @@
+- generic [ref=e2]:
+  - button "Dark mode" [ref=e106] [cursor=pointer]:
+    - img [ref=e107]
+  - generic [ref=e110]:
+    - button "Back" [ref=e111] [cursor=pointer]:
+      - img [ref=e112]
+      - text: Back
+    - heading "React Quiz" [level=2] [ref=e114]
+    - generic [ref=e115]:
+      - generic [ref=e116]:
+        - generic [ref=e117]: React
+        - generic [ref=e118]: 1/15
+      - generic [ref=e121]: Which tool does shadcn/ui rely on under the hood to handle component styling utilities cleanly?
+      - generic [ref=e122]:
+        - button "1 Tailwind CSS" [ref=e123] [cursor=pointer]:
+          - generic [ref=e124]: "1"
+          - generic [ref=e125]: Tailwind CSS
+        - button "2 Bootstrap Framework" [ref=e126] [cursor=pointer]:
+          - generic [ref=e127]: "2"
+          - generic [ref=e128]: Bootstrap Framework
+        - button "3 Sass preprocessor modules" [ref=e129] [cursor=pointer]:
+          - generic [ref=e130]: "3"
+          - generic [ref=e131]: Sass preprocessor modules
+        - button "4 Vanilla inline-styles objects" [ref=e132] [cursor=pointer]:
+          - generic [ref=e133]: "4"
+          - generic [ref=e134]: Vanilla inline-styles objects
+      - generic [ref=e135]:
+        - generic [ref=e136]:
+          - generic [ref=e137]: 1–4
+          - text: answer
+        - generic [ref=e138]:
+          - generic [ref=e139]: Esc
+          - text: back

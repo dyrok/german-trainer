@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Brain, Target, Settings, ArrowLeft, Check, X, Plus, Globe, Trophy,
   ChevronRight, Hash, Calendar, Clock, Users, MessageSquare, Smile,
   GraduationCap, User, CheckSquare, FileText, Languages, ArrowLeftRight,
   RotateCcw, Pencil, ClipboardPaste, Loader2, AlertCircle, BookOpen,
   Shuffle, Sparkles, Search, Trash2, RefreshCw, ListChecks, Layers, Moon, Sun,
+  Lightbulb, Send, Cpu, Atom, ChevronDown, Wand2, MessageCircle, Code,
 } from "lucide-react";
 
 /* ═══════════════════════════ DATA ═══════════════════════════ */
@@ -219,6 +220,41 @@ const EN2DE = [
   { en: "Can you repeat that, please?", de: "Können Sie das bitte wiederholen?" },
 ];
 
+/* ─── REACT subject: MCQ question bank ─── */
+const REACT_QUIZ = [
+  { q: "What type of components can use React Hooks?", o: ["Class components only", "Plain HTML files linked to JavaScript assets", "Functional components only", "Only layout components inside the public directory"], c: "C" },
+  { q: "Why might a React Single Page Application (SPA) show a 404 error when refreshing a sub-route on Netlify?", o: ["The application code is too large for the hosting environment", "The production build automatically deletes sub-route components", "The server tries to look for a physical file matching that path instead of routing to index.html", "Vite doesn't support nested routing links during compilation step"], c: "C" },
+  { q: "If you want a child component to send data back up to a parent, what do you pass as a prop?", o: ["The child component's local state hook object", "A modified string parameter", "A callback function defined in the parent component", "A standard link tag pointing upwards"], c: "C" },
+  { q: "What does the useState Hook return?", o: ["A single object matching all HTML data properties", "The state value string directly without any extra tools", "A promise that resolves when the page updates", "An array containing the current state value and a setter function"], c: "D" },
+  { q: "When deploying a Vite React app, what is the default command to build production-ready optimized static files?", o: ["vite start-app", "npm run build", "npm execute production", "npm run dev"], c: "B" },
+  { q: "What feature allows Netlify or Vercel to automatically rebuild your site whenever you push changes to GitHub?", o: ["Continuous Deployment (CD) integration hooks", "Node package manager installation triggers", "Local file watcher background cron scripts", "Browser extension tracking modules"], c: "A" },
+  { q: "What does an empty dependency array [] mean inside a useEffect Hook?", o: ["The effect will run on every single re-render block", "The effect will only run once when the component mounts", "The effect is turned off and will never execute at all", "The effect only triggers when state arrays are completely cleared"], c: "B" },
+  { q: "Why shouldn't you do 'state = NewValue' directly to update a state variable?", o: ["It will cause an immediate compiler crash in Vite", "It converts the variable into a fixed prop value", "React won't detect the change, and the UI won't update", "It deletes all other variables inside your component folder"], c: "C" },
+  { q: "What is the direction of data flow when using props?", o: ["Global (randomly between any component files)", "Bidirectional (back and forth evenly)", "Upwards only (from child to parent component)", "Unidirectional (downwards from parent to child)"], c: "D" },
+  { q: "Which of these is an example of imperative programming?", o: ["Using a conditional ternary operator in JSX", "Mapping an array to a list of elements", "Using document.getElementById('title').textContent = 'Hello'", "Returning <h1>Hello</h1> from a React component"], c: "C" },
+  { q: "What can a React component return?", o: ["Only standard HTML <div> tags", "Any valid CSS styling sheets", "JSON data objects only", "JSX elements, strings, numbers, or null"], c: "D" },
+  { q: "Do React Fragments appear inside the final browser HTML DOM tree?", o: ["Only when the application is running in production mode", "Yes, they render as a <fragment> tag", "Yes, they automatically turn into a <div> tag", "No, they disappear and leave only their child elements"], c: "D" },
+  { q: "What does 'declarative programming' mean in React?", o: ["You describe what the UI should look like, and React handles the updates", "You write step-by-step instructions to change the DOM manually", "You have to reload the entire webpage to change data", "You cannot use any JavaScript functions"], c: "A" },
+  { q: "What technology does React use to declaratively render UI components?", o: ["Sass scripts", "SQL", "JSX", "Python templates"], c: "C" },
+  { q: "Which built-in React Hook is used to track and update local component state?", o: ["useContext", "useRef", "useState", "useEffect"], c: "C" },
+  { q: "How do you install components from shadcn/ui into a local project structure?", o: ["Manually writing all accessible element parameters from scratch", "Downloading an immutable npm package that you cannot modify", "Using their specialized CLI command tool to add specific files", "Linking a global CDN script tag into the index.html template"], c: "C" },
+  { q: "In React, component names must always start with which type of letter?", o: ["A number symbol", "A lowercase letter", "An underscore character", "A capital letter"], c: "D" },
+  { q: "What tool is commonly used to create an optimized, modern React app build environment instead of Create React App?", o: ["Vite", "Babel Core scripts", "Nodemon instance", "Webpack CLI 1"], c: "A" },
+  { q: "What can be passed as a prop to a React component?", o: ["Strings, numbers, arrays, objects, and even functions", "Only plain text strings", "Only valid CSS stylesheets", "Only hook state variables"], c: "A" },
+  { q: "What happens to a component when its state updates?", o: ["The component crashes and displays an error box", "The entire webpage undergoes a full hard refresh", "The component automatically re-renders to reflect the new state", "The browser clears its local storage cache memory"], c: "C" },
+  { q: "How are props passed into a React component?", o: ["As global browser cookies", "Via a database connection string", "Through an import statement at the top of the file", "Like custom attributes on HTML tags"], c: "D" },
+  { q: "Can you create your own custom Hooks in React?", o: ["Yes, by writing a function whose name starts with the prefix 'use'", "Only when building a mobile layout using special extensions", "Yes, but they must be registered inside the package.json file", "No, only the built-in React team hooks can ever be run"], c: "A" },
+  { q: "What folder does Vite output its production-ready static assets into by default?", o: ["public", "build", "out", "dist"], c: "D" },
+  { q: "Which of these best describes component 'state'?", o: ["Like global variables tracked by an analytics server", "Like local variables declared inside a function block", "Like function arguments sent from a different file", "Like HTML tag properties defined in index.html"], c: "B" },
+  { q: "If both props and state change at the same time, what does React do?", o: ["It stops rendering entirely until a manual restart happens", "It ignores the props and only updates the state layout", "Schedulers trigger a re-render of the component to display current data", "It throws an overlapping data collision alert box"], c: "C" },
+  { q: "What configuration file or rule fixes sub-routing 404 issues for a React app hosted on Netlify?", o: ["Re-installing the vite dependency tool chain using npm", "A _redirects rule file or netlify.toml setup mapping to index.html", "Adding a homepage attribute to the project package.json configuration", "A clean script entry inside the tailwind config utility"], c: "B" },
+  { q: "Which tool does shadcn/ui rely on under the hood to handle component styling utilities cleanly?", o: ["Vanilla inline-styles objects", "Bootstrap Framework", "Sass preprocessor modules", "Tailwind CSS"], c: "D" },
+  { q: "What file is typically edited to configure path tracking aliases and utilities for Tailwind CSS?", o: ["postcss.config.js", "index.html", "tailwind.config.js", "vite.config.js"], c: "C" },
+  { q: "Which of these variables should be handled with 'state' rather than 'props'?", o: ["The styling color scheme passed from a layout root", "A fixed background image URL string", "Whether a user dropdown menu is currently open or closed", "A static application brand name text"], c: "C" },
+  { q: "In vanilla JS, adding a class using element.classList.add() is an example of what?", o: ["Imperative programming", "Asynchronous routing", "State management", "Declarative programming"], c: "A" },
+];
+const LETTER_IDX = { A: 0, B: 1, C: 2, D: 3 };
+
 /* ═══════════════════════════ PURE HELPERS ═══════════════════════════ */
 
 function shuffle(arr) {
@@ -304,8 +340,8 @@ const DAY = 86400000;
 function uid() { return "c" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 function r2(x)  { return Math.round(x * 100) / 100; }
 
-function newCard(front, back, deck, note, id) {
-  return { id: id || uid(), front, back, deck: deck || "My Notes", note: note || null,
+function newCard(front, back, deck, note, id, subject = "german") {
+  return { id: id || uid(), front, back, deck: deck || "My Notes", note: note || null, subject,
     ease: 2.5, interval: 0, reps: 0, lapses: 0, due: 0, state: "new", created: Date.now() };
 }
 
@@ -407,6 +443,42 @@ function seedCards() {
     .forEach((n) => add(String(n), n2g(n), "Numbers"));
   return out;
 }
+
+// React flashcards derived from the MCQ bank (front = question, back = correct option)
+function seedReactCards() {
+  return REACT_QUIZ.map((item, i) =>
+    newCard(item.q, item.o[LETTER_IDX[item.c]], "React Basics", null, "r" + i, "react"));
+}
+
+function seedAll() { return [...seedCards(), ...seedReactCards()]; }
+
+function freshData() {
+  return { v: 2, subject: "german", cards: seedAll(),
+    settings: { newPerDay: 20 }, daily: { day: todayStr(), newDone: 0 } };
+}
+
+// Upgrade older saved data: tag legacy cards as german, ensure React cards exist, ensure a subject.
+function migrate(d) {
+  if (!d) return freshData();
+  let cards = d.cards.map((c) => c.subject ? c : { ...c, subject: "german" });
+  if (!cards.some((c) => c.subject === "react")) cards = [...cards, ...seedReactCards()];
+  return { ...d, v: 2, subject: d.subject || "german", cards };
+}
+
+// Build a randomized React quiz in Exam format (options shuffled each round)
+function makeReactQuiz(n = 15) {
+  return shuffle(REACT_QUIZ).slice(0, n).map((item) => {
+    const answer = item.o[LETTER_IDX[item.c]];
+    return { section: "React", prompt: item.q, options: shuffle(item.o), answer };
+  });
+}
+
+/* ─── Subject registry ─── */
+const SUBJECTS = {
+  german: { id: "german", label: "German A1", sub: "Deutsch lernen", icon: Languages, accent: "teal" },
+  react:  { id: "react",  label: "React",     sub: "Frontend basics", icon: Atom,     accent: "sky"  },
+};
+const SUBJECT_LIST = Object.values(SUBJECTS);
 
 /* ═══════════════════════════ GENERATORS ═══════════════════════════ */
 
@@ -573,9 +645,42 @@ function TranslatePanel({ t }) {
   );
 }
 
+/* ═══════════════════════════ AI EXPLAIN ═══════════════════════════ */
+
+// Reusable "Explain with AI" affordance. `run` is an async fn returning text.
+function AIExplain({ run, label = "Explain with AI" }) {
+  const [text, setText]       = useState("");
+  const [loading, setLoading] = useState(false);
+  const [err, setErr]         = useState("");
+
+  if (text) {
+    return (
+      <div className="rounded-lg bg-sky-50 border border-sky-200 px-3 py-2 text-xs text-sky-900 whitespace-pre-wrap leading-relaxed">
+        <div className="flex items-center gap-1.5 font-semibold text-sky-700 mb-1"><Sparkles size={12} /> AI explanation</div>
+        {text}
+      </div>
+    );
+  }
+  return (
+    <div>
+      <button disabled={loading}
+        onClick={async () => {
+          setErr(""); setLoading(true);
+          try { setText(await run()); } catch (e) { setErr(e?.message || "request failed"); }
+          setLoading(false);
+        }}
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-sky-600 hover:text-sky-800 transition-colors py-1 disabled:opacity-50">
+        {loading ? <Loader2 size={13} className="animate-spin" /> : <Lightbulb size={13} />}
+        {loading ? "Thinking…" : label}
+      </button>
+      {err && <div className="mt-1 flex items-center gap-1.5 text-xs text-amber-700"><AlertCircle size={12} />{err}</div>}
+    </div>
+  );
+}
+
 /* ═══════════════════════════ EXAM (MCQ) ═══════════════════════════ */
 
-function Exam({ make, sectioned, onReview }) {
+function Exam({ make, sectioned, onReview, subjectLabel = "this subject" }) {
   const [questions]    = useState(make);
   const [qi, setQi]    = useState(0);
   const [picked, setPk] = useState(null);
@@ -712,6 +817,8 @@ function Exam({ make, sectioned, onReview }) {
           {q.explain && (
             <div className="rounded-lg bg-stone-50 border border-stone-200 px-3 py-2 text-xs text-stone-500">{q.explain}</div>
           )}
+          <AIExplain key={"ai" + qi}
+            run={() => explainAnswer({ prompt: q.prompt, options: q.options, answer: q.answer, picked }, subjectLabel)} />
           <Btn kind="primary" className="w-full" onClick={next}>
             Next <ChevronRight size={16} />
           </Btn>
@@ -726,7 +833,7 @@ function Exam({ make, sectioned, onReview }) {
 
 /* ═══════════════════════════ SRS SESSION ═══════════════════════════ */
 
-function SRSSession({ cards, maxNew = 20, onRate, onEnd }) {
+function SRSSession({ cards, maxNew = 20, onRate, onEnd, subjectLabel = "this subject" }) {
   const now = Date.now();
   const due  = cards.filter((c) => c.state !== "new" && c.due <= now);
   const newC = cards.filter((c) => c.state === "new");
@@ -804,11 +911,22 @@ function SRSSession({ cards, maxNew = 20, onRate, onEnd }) {
       </div>
 
       {flipped ? (
-        <div className="mt-4 flex gap-2">
-          <RatingBtn tone="again" label="Again" sub={fmtInt(prevInt(card, "again"))} onClick={() => rate("again")} />
-          <RatingBtn tone="hard"  label="Hard"  sub={fmtInt(prevInt(card, "hard"))}  onClick={() => rate("hard")} />
-          <RatingBtn tone="good"  label="Good"  sub={fmtInt(prevInt(card, "good"))}  onClick={() => rate("good")} />
-          <RatingBtn tone="easy"  label="Easy"  sub={fmtInt(prevInt(card, "easy"))}  onClick={() => rate("easy")} />
+        <div className="mt-4 space-y-3">
+          <AIExplain key={card.id} label="Explain this card"
+            run={() => groqChat(
+              [{ role: "user", content:
+                `You are a concise ${subjectLabel} tutor. Briefly explain this flashcard in 2-3 sentences so it sticks.\n` +
+                `Front: ${card.front}\nBack: ${card.back}` + (card.note ? `\nNote: ${card.note}` : "") +
+                "\nPlain text, no markdown headers."
+              }],
+              { temperature: 0.3, max_tokens: 320 },
+            )} />
+          <div className="flex gap-2">
+            <RatingBtn tone="again" label="Again" sub={fmtInt(prevInt(card, "again"))} onClick={() => rate("again")} />
+            <RatingBtn tone="hard"  label="Hard"  sub={fmtInt(prevInt(card, "hard"))}  onClick={() => rate("hard")} />
+            <RatingBtn tone="good"  label="Good"  sub={fmtInt(prevInt(card, "good"))}  onClick={() => rate("good")} />
+            <RatingBtn tone="easy"  label="Easy"  sub={fmtInt(prevInt(card, "easy"))}  onClick={() => rate("easy")} />
+          </div>
         </div>
       ) : (
         <div className="mt-4"><Btn kind="primary" className="w-full" onClick={() => setFlipped(true)}>Show answer</Btn></div>
@@ -1065,8 +1183,17 @@ function parsePaste(text) {
   });
 }
 
-const GROQ_KEY = "groq_api_key";
-const GROQ_MODEL = "llama-3.3-70b-versatile";
+const GROQ_KEY   = "groq_api_key";
+const GROQ_MODEL_KEY = "groq_model";
+const GROQ_MODELS = [
+  { id: "llama-3.3-70b-versatile", label: "Llama 3.3 70B", sub: "smartest · versatile" },
+  { id: "llama-3.1-8b-instant",   label: "Llama 3.1 8B",  sub: "fastest · cheap" },
+  { id: "openai/gpt-oss-120b",    label: "GPT-OSS 120B",  sub: "strong reasoning" },
+  { id: "openai/gpt-oss-20b",     label: "GPT-OSS 20B",   sub: "balanced" },
+  { id: "gemma2-9b-it",           label: "Gemma 2 9B",    sub: "lightweight" },
+];
+const DEFAULT_MODEL = GROQ_MODELS[0].id;
+
 function loadGroqKey() {
   try { return (typeof window !== "undefined" && window.localStorage.getItem(GROQ_KEY)) || ""; }
   catch { return ""; }
@@ -1075,22 +1202,24 @@ function saveGroqKey(k) {
   try { if (k) window.localStorage.setItem(GROQ_KEY, k); else window.localStorage.removeItem(GROQ_KEY); }
   catch {}
 }
+function loadGroqModel() {
+  try { return (typeof window !== "undefined" && window.localStorage.getItem(GROQ_MODEL_KEY)) || DEFAULT_MODEL; }
+  catch { return DEFAULT_MODEL; }
+}
+function saveGroqModel(m) { try { window.localStorage.setItem(GROQ_MODEL_KEY, m); } catch {} }
 
-async function callAI(notes, apiKey) {
-  if (!apiKey) throw new Error("Missing Groq API key");
+// Low-level Groq chat call. Returns the assistant message text.
+async function groqChat(messages, { key, model, json = false, temperature = 0.4, max_tokens = 1024 } = {}) {
+  const apiKey = key || loadGroqKey();
+  if (!apiKey) throw new Error("Add your Groq API key in Manage → AI settings first.");
   const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: "Bearer " + apiKey },
     body: JSON.stringify({
-      model: GROQ_MODEL,
-      temperature: 0.3,
-      response_format: { type: "json_object" },
-      messages: [{ role: "user", content:
-        "Turn these study notes into spaced-repetition flashcards.\n" +
-        "Return ONLY a JSON object of the form {\"cards\":[{\"front\":\"...\",\"back\":\"...\"}]} — no markdown, no backticks.\n" +
-        "One atomic fact per card. Max 20 cards.\n\n" +
-        "NOTES:\n" + notes
-      }],
+      model: model || loadGroqModel(),
+      temperature, max_tokens,
+      ...(json ? { response_format: { type: "json_object" } } : {}),
+      messages,
     }),
   });
   if (!res.ok) {
@@ -1099,11 +1228,63 @@ async function callAI(notes, apiKey) {
     throw new Error(msg);
   }
   const d = await res.json();
-  let txt = (d.choices?.[0]?.message?.content || "").trim();
-  txt = txt.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
-  const parsed = JSON.parse(txt);
+  return (d.choices?.[0]?.message?.content || "").trim();
+}
+
+function stripFences(txt) { return txt.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim(); }
+
+// Notes → flashcards
+async function callAI(notes, apiKey) {
+  const txt = await groqChat(
+    [{ role: "user", content:
+      "Turn these study notes into spaced-repetition flashcards.\n" +
+      "Return ONLY a JSON object of the form {\"cards\":[{\"front\":\"...\",\"back\":\"...\"}]} — no markdown, no backticks.\n" +
+      "One atomic fact per card. Max 20 cards.\n\nNOTES:\n" + notes
+    }],
+    { key: apiKey, json: true, temperature: 0.3 },
+  );
+  const parsed = JSON.parse(stripFences(txt));
   const arr = Array.isArray(parsed) ? parsed : (parsed.cards || []);
   return arr.filter((x) => x.front && x.back).map((x) => ({ front: String(x.front), back: String(x.back) }));
+}
+
+// Topic/notes → MCQ quiz (for the AI quiz generator). Returns Exam-format questions.
+async function callAIQuiz(topic, apiKey, n = 8) {
+  const txt = await groqChat(
+    [{ role: "user", content:
+      "Create a multiple-choice quiz from the topic or notes below.\n" +
+      "Return ONLY JSON: {\"questions\":[{\"prompt\":\"...\",\"options\":[\"a\",\"b\",\"c\",\"d\"],\"answer\":\"<exact text of the correct option>\",\"explain\":\"one short sentence\"}]}.\n" +
+      "Exactly 4 options each. 'answer' must be identical to one of the options. Max " + n + " questions. No markdown, no backticks.\n\nTOPIC / NOTES:\n" + topic
+    }],
+    { key: apiKey, json: true, temperature: 0.5, max_tokens: 2048 },
+  );
+  const parsed = JSON.parse(stripFences(txt));
+  const arr = Array.isArray(parsed) ? parsed : (parsed.questions || []);
+  return arr
+    .filter((x) => x.prompt && Array.isArray(x.options) && x.options.length >= 2 && x.answer)
+    .map((x) => ({
+      section: "AI Quiz",
+      prompt: String(x.prompt),
+      options: shuffle(x.options.map(String)),
+      answer: String(x.answer),
+      explain: x.explain ? String(x.explain) : undefined,
+    }))
+    .filter((x) => x.options.includes(x.answer));
+}
+
+// Explain a single MCQ answer
+async function explainAnswer({ prompt, options, answer, picked }, subjectLabel) {
+  return groqChat(
+    [{ role: "user", content:
+      `You are a concise ${subjectLabel} tutor. A student answered a quiz question.\n` +
+      `Question: ${prompt}\nOptions: ${options.join(" | ")}\n` +
+      `Correct answer: ${answer}\nStudent picked: ${picked}\n` +
+      "In 2-3 short sentences, explain why the correct answer is right" +
+      (picked && picked !== answer ? " and why the student's choice is wrong." : ".") +
+      " Plain text, no markdown headers."
+    }],
+    { temperature: 0.3, max_tokens: 320 },
+  );
 }
 
 function AddCards({ onAdd }) {
@@ -1235,10 +1416,12 @@ function AddCards({ onAdd }) {
 
 /* ═══════════════════════════ BROWSE ═══════════════════════════ */
 
-function Browse({ cards, settings, onDelete, onSettings, onReset, onResetAll }) {
+function Browse({ cards, settings, onDelete, onSettings, onReset, onResetAll, subjectLabel = "this subject" }) {
   const [q, setQ] = useState("");
   const [confirmReset, setConfirmReset] = useState(false);
   const [confirmResetAll, setConfirmResetAll] = useState(false);
+  const [apiKey, setApiKey] = useState(loadGroqKey);
+  const [model, setModel]   = useState(loadGroqModel);
   const now = Date.now();
 
   const filtered = cards
@@ -1255,6 +1438,29 @@ function Browse({ cards, settings, onDelete, onSettings, onReset, onResetAll }) 
           <span className="w-8 text-center font-semibold text-stone-800">{settings.newPerDay}</span>
           <button onClick={() => onSettings(settings.newPerDay + 5)}
             className="w-7 h-7 rounded-lg border border-stone-200 hover:bg-stone-50 text-stone-600">+</button>
+        </div>
+      </div>
+
+      {/* AI settings */}
+      <div className="rounded-2xl border border-stone-200 bg-white px-4 py-3 space-y-3">
+        <div className="flex items-center gap-1.5 text-sm font-semibold text-stone-700"><Cpu size={14} className="text-sky-500" /> AI settings (Groq)</div>
+        <div>
+          <label className="block text-xs text-stone-400 mb-1">
+            API key — <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" className="text-teal-600 hover:underline">get one free</a> · stored only in this browser
+          </label>
+          <input type="password" value={apiKey} autoComplete="off" placeholder="gsk_…"
+            onChange={(e) => { setApiKey(e.target.value); saveGroqKey(e.target.value.trim()); }}
+            className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm font-mono focus:outline-none focus:border-teal-400" />
+        </div>
+        <div>
+          <label className="block text-xs text-stone-400 mb-1">Model</label>
+          <div className="relative">
+            <select value={model} onChange={(e) => { setModel(e.target.value); saveGroqModel(e.target.value); }}
+              className="w-full appearance-none rounded-xl border border-stone-200 bg-white px-3 py-2 pr-8 text-sm focus:outline-none focus:border-teal-400">
+              {GROQ_MODELS.map((m) => <option key={m.id} value={m.id}>{m.label} — {m.sub}</option>)}
+            </select>
+            <ChevronDown size={15} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400" />
+          </div>
         </div>
       </div>
 
@@ -1289,14 +1495,14 @@ function Browse({ cards, settings, onDelete, onSettings, onReset, onResetAll }) 
       <div className="pt-2 border-t border-stone-200">
         {confirmReset ? (
           <div className="flex items-center gap-2.5">
-            <span className="text-sm text-stone-500 flex-1">Reset all progress to new?</span>
+            <span className="text-sm text-stone-500 flex-1">Reset all {subjectLabel} progress to new?</span>
             <Btn kind="danger" onClick={() => { onReset(); setConfirmReset(false); }}>Reset</Btn>
             <Btn onClick={() => setConfirmReset(false)}>Cancel</Btn>
           </div>
         ) : (
           <button onClick={() => setConfirmReset(true)}
             className="inline-flex items-center gap-2 text-sm text-stone-400 hover:text-rose-500">
-            <RotateCcw size={13} /> Reset all progress
+            <RotateCcw size={13} /> Reset {subjectLabel} progress
           </button>
         )}
       </div>
@@ -1314,6 +1520,140 @@ function Browse({ cards, settings, onDelete, onSettings, onReset, onResetAll }) 
             <Trash2 size={13} /> Reset app (delete all cards)
           </button>
         )}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════ AI QUIZ MAKER ═══════════════════════════ */
+
+function AIQuizMaker({ subjectLabel = "this subject" }) {
+  const [topic, setTopic]   = useState("");
+  const [n, setN]           = useState(8);
+  const [loading, setLoading] = useState(false);
+  const [err, setErr]       = useState("");
+  const [questions, setQuestions] = useState(null);
+
+  async function gen() {
+    if (!topic.trim() || loading) return;
+    setErr(""); setLoading(true);
+    try {
+      const qs = await callAIQuiz(topic.trim(), undefined, n);
+      if (!qs.length) setErr("No questions generated — try a clearer topic.");
+      else setQuestions(qs);
+    } catch (e) { setErr("Groq error: " + (e?.message || "request failed")); }
+    setLoading(false);
+  }
+
+  if (questions) {
+    return (
+      <div className="space-y-3">
+        <button onClick={() => setQuestions(null)} className="inline-flex items-center gap-2 text-sm text-stone-500 hover:text-stone-800">
+          <ArrowLeft size={15} /> New quiz
+        </button>
+        <Exam make={() => questions} subjectLabel={subjectLabel} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-stone-400">Enter a topic or paste notes — Groq writes a fresh multiple-choice quiz on {subjectLabel}.</p>
+      <textarea value={topic} onChange={(e) => setTopic(e.target.value)} rows={5} maxLength={4000}
+        placeholder={subjectLabel === "React" ? "e.g. React hooks: useState, useEffect, custom hooks" : "e.g. German articles and plural forms"}
+        className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
+      <div className="flex items-center justify-between">
+        <label className="inline-flex items-center gap-2 text-sm text-stone-600">
+          Questions
+          <div className="inline-flex items-center gap-2">
+            <button onClick={() => setN((v) => Math.max(4, v - 2))} className="w-7 h-7 rounded-lg border border-stone-200 hover:bg-stone-50 text-stone-600">–</button>
+            <span className="w-6 text-center font-semibold text-stone-800">{n}</span>
+            <button onClick={() => setN((v) => Math.min(15, v + 2))} className="w-7 h-7 rounded-lg border border-stone-200 hover:bg-stone-50 text-stone-600">+</button>
+          </div>
+        </label>
+        <Btn kind="primary" disabled={!topic.trim() || loading} onClick={gen}>
+          {loading ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
+          {loading ? "Generating…" : "Generate quiz"}
+        </Btn>
+      </div>
+      {err && <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2"><AlertCircle size={13} />{err}</div>}
+    </div>
+  );
+}
+
+/* ═══════════════════════════ AI TUTOR ═══════════════════════════ */
+
+function Tutor({ subjectLabel = "this subject" }) {
+  const [msgs, setMsgs]       = useState([]);
+  const [input, setInput]     = useState("");
+  const [loading, setLoading] = useState(false);
+  const [err, setErr]         = useState("");
+  const endRef = useRef(null);
+
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, loading]);
+
+  const suggestions = subjectLabel === "React"
+    ? ["What's the difference between props and state?", "Explain useEffect dependency arrays", "When should I make a custom hook?"]
+    : ["How do German articles work?", "Explain the difference between du and Sie", "Give me 5 useful A1 phrases"];
+
+  async function send(text) {
+    const q = (text ?? input).trim();
+    if (!q || loading) return;
+    const next = [...msgs, { role: "user", content: q }];
+    setMsgs(next); setInput(""); setErr(""); setLoading(true);
+    try {
+      const sys = { role: "system", content:
+        `You are a friendly, concise ${subjectLabel} tutor. Give clear, correct, example-driven answers and keep them focused. Use short paragraphs; avoid heavy markdown.` };
+      const reply = await groqChat([sys, ...next], { temperature: 0.5, max_tokens: 1024 });
+      setMsgs((m) => [...m, { role: "assistant", content: reply }]);
+    } catch (e) { setErr(e?.message || "request failed"); }
+    setLoading(false);
+  }
+
+  return (
+    <div className="rounded-2xl border border-stone-200 bg-white flex flex-col" style={{ height: "60vh" }}>
+      <div className="flex-1 overflow-auto p-3 space-y-3">
+        {msgs.length === 0 && !loading && (
+          <div className="h-full flex flex-col items-center justify-center text-center px-4">
+            <MessageCircle size={26} className="text-stone-300 mb-2" />
+            <p className="text-sm text-stone-400 mb-3">Ask your {subjectLabel} tutor anything.</p>
+            <div className="space-y-1.5 w-full">
+              {suggestions.map((s) => (
+                <button key={s} onClick={() => send(s)}
+                  className="w-full text-left text-xs rounded-lg border border-stone-200 px-3 py-2 text-stone-600 hover:border-teal-300 hover:bg-stone-50">
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        {msgs.map((m, i) => (
+          <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
+            <div className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm whitespace-pre-wrap leading-relaxed ${
+              m.role === "user" ? "bg-teal-600 text-white" : "bg-stone-100 text-stone-800 border border-stone-200"}`}>
+              {m.content}
+            </div>
+          </div>
+        ))}
+        {loading && (
+          <div className="flex justify-start">
+            <div className="rounded-2xl bg-stone-100 border border-stone-200 px-3.5 py-2 text-sm text-stone-400 inline-flex items-center gap-2">
+              <Loader2 size={14} className="animate-spin" /> thinking…
+            </div>
+          </div>
+        )}
+        {err && <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2"><AlertCircle size={13} />{err}</div>}
+        <div ref={endRef} />
+      </div>
+      <div className="border-t border-stone-200 p-2.5 flex items-end gap-2">
+        <textarea value={input} onChange={(e) => setInput(e.target.value)} rows={1}
+          onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); } }}
+          placeholder="Type a question…"
+          className="flex-1 resize-none rounded-xl border border-stone-200 px-3 py-2 text-sm focus:outline-none focus:border-teal-400 max-h-28" />
+        <button onClick={() => send()} disabled={!input.trim() || loading}
+          className="shrink-0 w-9 h-9 rounded-xl bg-teal-600 text-white flex items-center justify-center hover:bg-teal-700 disabled:opacity-40 transition-colors">
+          <Send size={16} />
+        </button>
       </div>
     </div>
   );
@@ -1450,8 +1790,7 @@ export default function App() {
 
   useEffect(() => {
     (async () => {
-      let d = await loadData();
-      if (!d) d = { v: 1, cards: seedCards(), settings: { newPerDay: 20 }, daily: { day: todayStr(), newDone: 0 } };
+      let d = migrate(await loadData());
       if (d.daily.day !== todayStr()) d = { ...d, daily: { day: todayStr(), newDone: 0 } };
       if (d.settings && d.settings.dark) setDark(d.settings.dark);
       setPersistent(hasStore());
@@ -1470,7 +1809,8 @@ export default function App() {
   function showFlash(msg) { setFlash(msg); setTimeout(() => setFlash(""), 2500); }
 
   function addCards(list, deck) {
-    const created = list.map((c) => newCard(c.front, c.back, deck));
+    const subj = (data && data.subject) || "german";
+    const created = list.map((c) => newCard(c.front, c.back, deck, null, undefined, subj));
     commit((d) => ({ ...d, cards: [...d.cards, ...created] }));
     showFlash("Added " + created.length + " card(s) to '" + deck + "'" );
   }
@@ -1496,7 +1836,10 @@ export default function App() {
     );
   }
 
-  const { cards, settings } = data;
+  const { settings } = data;
+  const subject = data.subject || "german";
+  const subjMeta = SUBJECTS[subject] || SUBJECTS.german;
+  const cards = data.cards.filter((c) => (c.subject || "german") === subject);
   const now = Date.now();
   const reviewDue = cards.filter((c) => c.state !== "new" && c.due <= now).length;
   const newAvail  = Math.min(
@@ -1506,6 +1849,11 @@ export default function App() {
   const dueTotal   = reviewDue + newAvail;
   const upcoming   = cards.filter((c) => c.due > now).sort((a, b) => a.due - b.due)[0];
   const inSession  = session || subview;  // hide bottom nav
+
+  function setSubject(s) {
+    commit((d) => ({ ...d, subject: s }));
+    setTab("study"); setSubview(null); setSession(false);
+  }
 
   // ── SRS session ──
   const toggleDark = () => {
@@ -1526,6 +1874,7 @@ export default function App() {
           <SRSSession
             cards={cards}
             maxNew={newAvail}
+            subjectLabel={subjMeta.label}
             onRate={(card, rating) => {
               const updated = schedule(card, rating);
               const wasNew  = card.state === "new";
@@ -1547,16 +1896,18 @@ export default function App() {
   if (subview) {
     let title = "", content = null;
 
-    if (subview === "truefalse") { title = "True / False"; content = <Exam make={() => buildN(genTF, 12)} />; }
+    if (subview === "truefalse") { title = "True / False"; content = <Exam make={() => buildN(genTF, 12)} subjectLabel={subjMeta.label} />; }
     else if (subview === "numbers")   { title = "Numbers"; content = <NumTrainer />; }
-    else if (subview === "reading")   { title = "Reading"; content = <Exam make={() => buildN(genReading, 8)} />; }
-    else if (subview === "en2de")     { title = "EN → DE"; content = <Exam make={() => buildN(genEN2DE, 12)} />; }
-    else if (subview === "countries") { title = "Languages"; content = <Exam make={() => buildN(genCountry, 12)} />; }
-    else if (subview === "time")      { title = "Time";     content = <Exam make={() => buildN(genTime, 10)} />; }
+    else if (subview === "reading")   { title = "Reading"; content = <Exam make={() => buildN(genReading, 8)} subjectLabel={subjMeta.label} />; }
+    else if (subview === "en2de")     { title = "EN → DE"; content = <Exam make={() => buildN(genEN2DE, 12)} subjectLabel={subjMeta.label} />; }
+    else if (subview === "countries") { title = "Languages"; content = <Exam make={() => buildN(genCountry, 12)} subjectLabel={subjMeta.label} />; }
+    else if (subview === "time")      { title = "Time";     content = <Exam make={() => buildN(genTime, 10)} subjectLabel={subjMeta.label} />; }
+    else if (subview === "reactquiz") { title = "React Quiz"; content = <Exam make={() => makeReactQuiz(15)} subjectLabel="React" />; }
+    else if (subview === "aiquiz")    { title = "AI Quiz Generator"; content = <AIQuizMaker subjectLabel={subjMeta.label} />; }
     else if (subview.startsWith("test:")) {
       const n = subview.split(":")[1];
       title = "Mock Test " + n;
-      content = <Exam make={buildTest} sectioned />;
+      content = <Exam make={buildTest} sectioned subjectLabel={subjMeta.label} />;
     }
     else if (subview.startsWith("deck:")) {
       const key = subview.slice(5);
@@ -1604,6 +1955,21 @@ export default function App() {
     <div className="min-h-screen bg-stone-100 text-stone-800 pb-20">
       <div className="mx-auto max-w-xl px-4 py-6">
         <DarkToggle dark={dark} onToggle={toggleDark} />
+
+        {/* subject switcher */}
+        <div className="mb-5 inline-flex rounded-2xl border border-stone-200 bg-white p-1">
+          {SUBJECT_LIST.map((s) => {
+            const Icon = s.icon;
+            const active = subject === s.id;
+            return (
+              <button key={s.id} onClick={() => setSubject(s.id)}
+                className={`inline-flex items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-semibold transition-colors ${active ? "bg-teal-600 text-white shadow-sm" : "text-stone-500 hover:text-stone-800"}`}>
+                <Icon size={15} /> {s.label}
+              </button>
+            );
+          })}
+        </div>
+
         {/* flash */}
         {flash && (
           <div className="mb-4 flex items-center gap-2 rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2 text-sm text-emerald-700">
@@ -1668,7 +2034,28 @@ export default function App() {
         )}
 
         {/* ─── PRACTICE TAB ─── */}
-        {tab === "practice" && (
+        {tab === "practice" && subject === "react" && (
+          <div className="space-y-6">
+            <h1 className="text-2xl font-bold tracking-tight">
+              <span className="font-serif italic text-teal-700">Practice</span> · React
+            </h1>
+            <div>
+              <div className="flex items-center gap-2 mb-2.5">
+                <span className="text-xs font-semibold uppercase tracking-wide text-stone-400">Quizzes</span>
+                <div className="h-px flex-1 bg-stone-200" />
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                <Tile label="React Quiz" sub={`${REACT_QUIZ.length} MCQs · shuffled`} icon={ListChecks} onClick={() => setSubview("reactquiz")} />
+                <Tile label="AI Quiz" sub="generate from a topic" icon={Wand2} onClick={() => setSubview("aiquiz")} />
+              </div>
+            </div>
+            <div className="rounded-xl bg-stone-50 border border-stone-200 p-3 text-xs text-stone-500 leading-relaxed">
+              After answering any question, tap <span className="font-semibold text-stone-700">Explain with AI</span> for a Groq-powered breakdown. Set your key in Manage → AI settings.
+            </div>
+          </div>
+        )}
+
+        {tab === "practice" && subject === "german" && (
           <div className="space-y-6">
             <h1 className="text-2xl font-bold tracking-tight">
               <span className="font-serif italic text-teal-700">Practice</span>
@@ -1683,6 +2070,7 @@ export default function App() {
                 {PRACTICE_TILES.map((t) => (
                   <Tile key={t.id} label={t.label} sub={t.sub} icon={t.icon} onClick={() => setSubview(t.id)} />
                 ))}
+                <Tile label="AI Quiz" sub="generate from a topic" icon={Wand2} onClick={() => setSubview("aiquiz")} />
               </div>
             </div>
 
@@ -1745,15 +2133,30 @@ export default function App() {
                 onSettings={(v) => commit((d) => ({ ...d, settings: { ...d.settings, newPerDay: v } }))}
                 onReset={() => commit((d) => ({
                   ...d,
-                  cards: d.cards.map((c) => ({ ...c, ease: 2.5, interval: 0, reps: 0, lapses: 0, due: 0, state: "new" })),
+                  cards: d.cards.map((c) => (c.subject || "german") === subject
+                    ? { ...c, ease: 2.5, interval: 0, reps: 0, lapses: 0, due: 0, state: "new" } : c),
                   daily: { day: todayStr(), newDone: 0 },
                 }))}
                 onResetAll={async () => {
                   await clearData();
-                  commit(() => ({ v: 1, cards: seedCards(), settings: { newPerDay: 20 }, daily: { day: todayStr(), newDone: 0 } }));
+                  commit(() => ({ ...freshData(), subject }));
                 }}
+                subjectLabel={subjMeta.label}
               />
             </div>
+          </div>
+        )}
+
+        {/* ─── TUTOR TAB ─── */}
+        {tab === "tutor" && (
+          <div className="space-y-4">
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight">
+                <span className="font-serif italic text-teal-700">AI</span> Tutor
+              </h1>
+              <p className="text-sm text-stone-400 mt-0.5">Ask anything about {subjMeta.label}. Powered by Groq.</p>
+            </div>
+            <Tutor subjectLabel={subjMeta.label} />
           </div>
         )}
       </div>
@@ -1762,9 +2165,10 @@ export default function App() {
       <div className={`fixed bottom-0 left-0 right-0 border-t backdrop-blur-sm ${dark ? "border-stone-700 bg-stone-900/95" : "border-stone-200 bg-white/95"}`}>
         <div className="mx-auto max-w-xl flex">
           {[
-            { id: "study",    icon: Brain,    label: "Study",    badge: dueTotal > 0 ? dueTotal : null },
-            { id: "practice", icon: Target,   label: "Practice", badge: null },
-            { id: "manage",   icon: Settings, label: "Manage",   badge: null },
+            { id: "study",    icon: Brain,        label: "Study",    badge: dueTotal > 0 ? dueTotal : null },
+            { id: "practice", icon: Target,       label: "Practice", badge: null },
+            { id: "tutor",    icon: MessageCircle, label: "Tutor",    badge: null },
+            { id: "manage",   icon: Settings,     label: "Manage",   badge: null },
           ].map(({ id, icon: Icon, label, badge }) => (
             <button key={id} onClick={() => setTab(id)}
               className={`flex-1 flex flex-col items-center gap-1 py-3 relative transition-colors ${tab === id ? "text-teal-600" : "text-stone-400 hover:text-stone-600"}`}>
