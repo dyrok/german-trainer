@@ -688,7 +688,7 @@ function AIExplain({ run, label = "Explain with AI" }) {
 
 /* ═══════════════════════════ EXAM (MCQ) ═══════════════════════════ */
 
-function Exam({ make, sectioned, onReview, subjectLabel = "this subject", timeLimitSec = 0 }) {
+function Exam({ make, sectioned, onReview, subjectLabel = "this subject", timeLimitSec = 0, onAddMissed }) {
   const [questions, setQuestions] = useState(make);
   const [qi, setQi]    = useState(0);
   const [picked, setPk] = useState(null);
@@ -696,6 +696,7 @@ function Exam({ make, sectioned, onReview, subjectLabel = "this subject", timeLi
   const [showT, setShowT] = useState(false); // translate panel toggle
   const [fresh, setFresh] = useState(false);  // trigger re-generate
   const [timeLeft, setTimeLeft] = useState(timeLimitSec);
+  const [added, setAdded] = useState(false);  // missed-to-flashcards done
 
   const finished = qi >= questions.length;
   const q = finished ? null : questions[qi];
@@ -777,14 +778,23 @@ function Exam({ make, sectioned, onReview, subjectLabel = "this subject", timeLi
         )}
         <div className="mt-5 flex flex-wrap gap-2.5 justify-center">
           {missed.length > 0 && (
-            <Btn kind="primary" onClick={() => { setQuestions(missed.map((h) => h.q)); setQi(0); setPk(null); setH([]); setShowT(false); setTimeLeft(timeLimitSec); }}>
+            <Btn kind="primary" onClick={() => { setQuestions(missed.map((h) => h.q)); setQi(0); setPk(null); setH([]); setShowT(false); setTimeLeft(timeLimitSec); setAdded(false); }}>
               <RotateCcw size={15} /> Retry {missed.length} missed
             </Btn>
           )}
-          <Btn kind={missed.length > 0 ? "ghost" : "primary"} onClick={() => { setQuestions(make()); setQi(0); setPk(null); setH([]); setShowT(false); setTimeLeft(timeLimitSec); }}>
+          <Btn kind={missed.length > 0 ? "ghost" : "primary"} onClick={() => { setQuestions(make()); setQi(0); setPk(null); setH([]); setShowT(false); setTimeLeft(timeLimitSec); setAdded(false); }}>
             <RefreshCw size={15} /> New round
           </Btn>
         </div>
+        {onAddMissed && missed.length > 0 && (
+          <div className="mt-3 flex justify-center">
+            <button disabled={added}
+              onClick={() => { onAddMissed(missed.map((h) => ({ front: h.q.prompt, back: h.q.answer }))); setAdded(true); }}
+              className="inline-flex items-center gap-1.5 text-sm font-medium text-teal-600 hover:text-teal-800 disabled:text-emerald-600 transition-colors">
+              {added ? <><Check size={15} /> Added to flashcards</> : <><Plus size={15} /> Add {missed.length} missed to flashcards</>}
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -1559,7 +1569,7 @@ function Browse({ cards, settings, onDelete, onSettings, onReset, onResetAll, su
 
 /* ═══════════════════════════ AI QUIZ MAKER ═══════════════════════════ */
 
-function AIQuizMaker({ subjectLabel = "this subject" }) {
+function AIQuizMaker({ subjectLabel = "this subject", onAddMissed }) {
   const [topic, setTopic]   = useState("");
   const [n, setN]           = useState(8);
   const [loading, setLoading] = useState(false);
@@ -1583,7 +1593,7 @@ function AIQuizMaker({ subjectLabel = "this subject" }) {
         <button onClick={() => setQuestions(null)} className="inline-flex items-center gap-2 text-sm text-stone-500 hover:text-stone-800">
           <ArrowLeft size={15} /> New quiz
         </button>
-        <Exam make={() => questions} subjectLabel={subjectLabel} />
+        <Exam make={() => questions} subjectLabel={subjectLabel} onAddMissed={onAddMissed} />
       </div>
     );
   }
@@ -1619,7 +1629,7 @@ const SECS_PER_Q = 35; // assumed pace for sizing a timed quiz
 
 function sprintCount(min) { return Math.max(5, Math.min(25, Math.round((min * 60) / SECS_PER_Q))); }
 
-function TimedQuiz({ subject, subjectLabel = "this subject" }) {
+function TimedQuiz({ subject, subjectLabel = "this subject", onAddMissed }) {
   const [phase, setPhase]     = useState("setup"); // setup | loading | run
   const [minutes, setMinutes] = useState(10);
   const [built, setBuilt]     = useState(null);    // { questions, timeLimitSec }
@@ -1656,7 +1666,7 @@ function TimedQuiz({ subject, subjectLabel = "this subject" }) {
           <ArrowLeft size={15} /> New sprint
         </button>
         {note && <div className="flex items-start gap-1.5 text-xs text-stone-400"><Sparkles size={12} className="mt-0.5 shrink-0 text-sky-400" />{note}</div>}
-        <Exam make={() => built.questions} timeLimitSec={built.timeLimitSec} subjectLabel={subjectLabel} />
+        <Exam make={() => built.questions} timeLimitSec={built.timeLimitSec} subjectLabel={subjectLabel} onAddMissed={onAddMissed} />
       </div>
     );
   }
@@ -2028,20 +2038,21 @@ export default function App() {
   // ── Sub-views (practice / deck drills) ──
   if (subview) {
     let title = "", content = null;
+    const addMissed = (cardList) => addCards(cardList, "Review");
 
-    if (subview === "truefalse") { title = "True / False"; content = <Exam make={() => buildN(genTF, 12)} subjectLabel={subjMeta.label} />; }
+    if (subview === "truefalse") { title = "True / False"; content = <Exam make={() => buildN(genTF, 12)} subjectLabel={subjMeta.label} onAddMissed={addMissed} />; }
     else if (subview === "numbers")   { title = "Numbers"; content = <NumTrainer />; }
-    else if (subview === "reading")   { title = "Reading"; content = <Exam make={() => buildN(genReading, 8)} subjectLabel={subjMeta.label} />; }
-    else if (subview === "en2de")     { title = "EN → DE"; content = <Exam make={() => buildN(genEN2DE, 12)} subjectLabel={subjMeta.label} />; }
-    else if (subview === "countries") { title = "Languages"; content = <Exam make={() => buildN(genCountry, 12)} subjectLabel={subjMeta.label} />; }
-    else if (subview === "time")      { title = "Time";     content = <Exam make={() => buildN(genTime, 10)} subjectLabel={subjMeta.label} />; }
-    else if (subview === "reactquiz") { title = "React Quiz"; content = <Exam make={() => makeReactQuiz(15)} subjectLabel="React" />; }
-    else if (subview === "aiquiz")    { title = "AI Quiz Generator"; content = <AIQuizMaker subjectLabel={subjMeta.label} />; }
-    else if (subview === "timed")     { title = "Timed Sprint"; content = <TimedQuiz subject={subject} subjectLabel={subjMeta.label} />; }
+    else if (subview === "reading")   { title = "Reading"; content = <Exam make={() => buildN(genReading, 8)} subjectLabel={subjMeta.label} onAddMissed={addMissed} />; }
+    else if (subview === "en2de")     { title = "EN → DE"; content = <Exam make={() => buildN(genEN2DE, 12)} subjectLabel={subjMeta.label} onAddMissed={addMissed} />; }
+    else if (subview === "countries") { title = "Languages"; content = <Exam make={() => buildN(genCountry, 12)} subjectLabel={subjMeta.label} onAddMissed={addMissed} />; }
+    else if (subview === "time")      { title = "Time";     content = <Exam make={() => buildN(genTime, 10)} subjectLabel={subjMeta.label} onAddMissed={addMissed} />; }
+    else if (subview === "reactquiz") { title = "React Quiz"; content = <Exam make={() => makeReactQuiz(15)} subjectLabel="React" onAddMissed={addMissed} />; }
+    else if (subview === "aiquiz")    { title = "AI Quiz Generator"; content = <AIQuizMaker subjectLabel={subjMeta.label} onAddMissed={addMissed} />; }
+    else if (subview === "timed")     { title = "Timed Sprint"; content = <TimedQuiz subject={subject} subjectLabel={subjMeta.label} onAddMissed={addMissed} />; }
     else if (subview.startsWith("test:")) {
       const n = subview.split(":")[1];
       title = "Mock Test " + n;
-      content = <Exam make={buildTest} sectioned subjectLabel={subjMeta.label} />;
+      content = <Exam make={buildTest} sectioned subjectLabel={subjMeta.label} onAddMissed={addMissed} />;
     }
     else if (subview.startsWith("deck:")) {
       const key = subview.slice(5);
