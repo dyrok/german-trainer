@@ -680,17 +680,26 @@ function AIExplain({ run, label = "Explain with AI" }) {
 
 /* ═══════════════════════════ EXAM (MCQ) ═══════════════════════════ */
 
-function Exam({ make, sectioned, onReview, subjectLabel = "this subject" }) {
+function Exam({ make, sectioned, onReview, subjectLabel = "this subject", timeLimitSec = 0 }) {
   const [questions]    = useState(make);
   const [qi, setQi]    = useState(0);
   const [picked, setPk] = useState(null);
   const [history, setH]= useState([]);
   const [showT, setShowT] = useState(false); // translate panel toggle
   const [fresh, setFresh] = useState(false);  // trigger re-generate
+  const [timeLeft, setTimeLeft] = useState(timeLimitSec);
 
   const finished = qi >= questions.length;
   const q = finished ? null : questions[qi];
   const answered = picked !== null;
+
+  // countdown timer (timed sprints) — auto-finish when it hits zero
+  useEffect(() => {
+    if (!timeLimitSec || finished) return;
+    if (timeLeft <= 0) { setQi(questions.length); return; }
+    const t = setTimeout(() => setTimeLeft((s) => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [timeLeft, timeLimitSec, finished, questions.length]);
 
   function choose(opt) {
     if (picked) return;
@@ -755,8 +764,11 @@ function Exam({ make, sectioned, onReview, subjectLabel = "this subject" }) {
             </div>
           </div>
         )}
+        {timeLimitSec > 0 && timeLeft <= 0 && (
+          <p className="mt-2 text-xs text-amber-600">⏱ Time's up — unanswered questions counted as missed.</p>
+        )}
         <div className="mt-5 flex gap-2.5 justify-center">
-          <Btn kind="primary" onClick={() => { setQi(0); setPk(null); setH([]); setShowT(false); }}>
+          <Btn kind="primary" onClick={() => { setQi(0); setPk(null); setH([]); setShowT(false); setTimeLeft(timeLimitSec); }}>
             <RefreshCw size={15} /> New round
           </Btn>
         </div>
@@ -766,9 +778,16 @@ function Exam({ make, sectioned, onReview, subjectLabel = "this subject" }) {
 
   return (
     <div>
-      <div className="flex justify-between text-xs text-stone-400 mb-2">
+      <div className="flex justify-between items-center text-xs text-stone-400 mb-2">
         <span className="rounded-full bg-stone-100 px-2 py-0.5 text-stone-500">{q.section}</span>
-        <span>{qi + 1}/{questions.length}</span>
+        <div className="flex items-center gap-2">
+          {timeLimitSec > 0 && (
+            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono font-semibold ${timeLeft <= 30 ? "bg-rose-50 text-rose-600" : "bg-sky-50 text-sky-600"}`}>
+              <Clock size={11} /> {Math.floor(timeLeft / 60)}:{pad2(timeLeft % 60)}
+            </span>
+          )}
+          <span>{qi + 1}/{questions.length}</span>
+        </div>
       </div>
       <Bar value={qi} max={questions.length} />
 
@@ -1581,6 +1600,82 @@ function AIQuizMaker({ subjectLabel = "this subject" }) {
   );
 }
 
+/* ═══════════════════════════ TIMED SPRINT ═══════════════════════════ */
+
+const SECS_PER_Q = 35; // assumed pace for sizing a timed quiz
+
+function sprintCount(min) { return Math.max(5, Math.min(25, Math.round((min * 60) / SECS_PER_Q))); }
+
+function TimedQuiz({ subject, subjectLabel = "this subject" }) {
+  const [phase, setPhase]     = useState("setup"); // setup | loading | run
+  const [minutes, setMinutes] = useState(10);
+  const [built, setBuilt]     = useState(null);    // { questions, timeLimitSec }
+  const [note, setNote]       = useState("");
+
+  async function build() {
+    setPhase("loading");
+    const n = sprintCount(minutes);
+    let questions = [], msg = "";
+    if (loadGroqKey()) {
+      try {
+        const topic =
+          `Build the highest-yield ${subjectLabel} practice quiz that lets a learner master the essentials in ${minutes} minutes. ` +
+          `Prioritize the most important, commonly-tested core concepts, mixing easier recall with a few harder application questions. Exactly ${n} questions.`;
+        questions = await callAIQuiz(topic, undefined, n);
+        if (questions.length) msg = `AI-curated ${questions.length} high-yield questions for your ${minutes}-minute window.`;
+      } catch (e) { msg = "AI unavailable (" + (e?.message || "error") + ") — using the built-in bank."; }
+    }
+    if (!questions.length) {
+      questions = subject === "react" ? makeReactQuiz(n) : buildTest().slice(0, n);
+      if (!msg) msg = loadGroqKey()
+        ? "Using the built-in question bank."
+        : "Built-in question bank. Add a Groq key in Manage → AI settings for AI-curated sprints.";
+    }
+    setNote(msg);
+    setBuilt({ questions: questions.slice(0, n), timeLimitSec: minutes * 60 });
+    setPhase("run");
+  }
+
+  if (phase === "run" && built) {
+    return (
+      <div className="space-y-3">
+        <button onClick={() => { setPhase("setup"); setBuilt(null); }} className="inline-flex items-center gap-2 text-sm text-stone-500 hover:text-stone-800">
+          <ArrowLeft size={15} /> New sprint
+        </button>
+        {note && <div className="flex items-start gap-1.5 text-xs text-stone-400"><Sparkles size={12} className="mt-0.5 shrink-0 text-sky-400" />{note}</div>}
+        <Exam make={() => built.questions} timeLimitSec={built.timeLimitSec} subjectLabel={subjectLabel} />
+      </div>
+    );
+  }
+
+  const opts = [5, 10, 15, 20, 30];
+  return (
+    <div className="space-y-4">
+      <p className="text-xs text-stone-400">
+        Tell us how long you've got — we build the best {subjectLabel} quiz to fit, sized so you can finish in time, with a live countdown.
+      </p>
+      <div>
+        <div className="text-sm text-stone-600 mb-2">Time budget</div>
+        <div className="grid grid-cols-5 gap-2">
+          {opts.map((m) => (
+            <button key={m} onClick={() => setMinutes(m)} disabled={phase === "loading"}
+              className={`rounded-xl border px-2 py-3 text-sm font-semibold transition-colors ${minutes === m ? "bg-teal-600 text-white border-teal-600" : "bg-white border-stone-200 text-stone-600 hover:border-teal-300"}`}>
+              {m}m
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="rounded-xl bg-stone-50 border border-stone-200 px-3 py-2 text-xs text-stone-500">
+        ≈ {sprintCount(minutes)} questions · {minutes}:00 on the clock · auto-submits when time runs out
+      </div>
+      <Btn kind="primary" className="w-full" disabled={phase === "loading"} onClick={build}>
+        {phase === "loading" ? <Loader2 size={14} className="animate-spin" /> : <Clock size={14} />}
+        {phase === "loading" ? "Building your sprint…" : `Start ${minutes}-minute sprint`}
+      </Btn>
+    </div>
+  );
+}
+
 /* ═══════════════════════════ AI TUTOR ═══════════════════════════ */
 
 function Tutor({ subjectLabel = "this subject" }) {
@@ -1904,6 +1999,7 @@ export default function App() {
     else if (subview === "time")      { title = "Time";     content = <Exam make={() => buildN(genTime, 10)} subjectLabel={subjMeta.label} />; }
     else if (subview === "reactquiz") { title = "React Quiz"; content = <Exam make={() => makeReactQuiz(15)} subjectLabel="React" />; }
     else if (subview === "aiquiz")    { title = "AI Quiz Generator"; content = <AIQuizMaker subjectLabel={subjMeta.label} />; }
+    else if (subview === "timed")     { title = "Timed Sprint"; content = <TimedQuiz subject={subject} subjectLabel={subjMeta.label} />; }
     else if (subview.startsWith("test:")) {
       const n = subview.split(":")[1];
       title = "Mock Test " + n;
@@ -2046,6 +2142,7 @@ export default function App() {
               </div>
               <div className="grid grid-cols-2 gap-2.5">
                 <Tile label="React Quiz" sub={`${REACT_QUIZ.length} MCQs · shuffled`} icon={ListChecks} onClick={() => setSubview("reactquiz")} />
+                <Tile label="Timed Sprint" sub="best quiz in your time" icon={Clock} onClick={() => setSubview("timed")} />
                 <Tile label="AI Quiz" sub="generate from a topic" icon={Wand2} onClick={() => setSubview("aiquiz")} />
               </div>
             </div>
@@ -2070,6 +2167,7 @@ export default function App() {
                 {PRACTICE_TILES.map((t) => (
                   <Tile key={t.id} label={t.label} sub={t.sub} icon={t.icon} onClick={() => setSubview(t.id)} />
                 ))}
+                <Tile label="Timed Sprint" sub="best quiz in your time" icon={Clock} onClick={() => setSubview("timed")} />
                 <Tile label="AI Quiz" sub="generate from a topic" icon={Wand2} onClick={() => setSubview("aiquiz")} />
               </div>
             </div>
