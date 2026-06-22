@@ -352,16 +352,39 @@ function relTime(due) {
 /* ═══════════════════════════ PERSISTENCE ═══════════════════════════ */
 
 const KEY = "srs_german_a1_v1";
-function hasStore() { return typeof window !== "undefined" && window.storage && typeof window.storage.get === "function"; }
+function hasSandboxStore() { return typeof window !== "undefined" && window.storage && typeof window.storage.get === "function"; }
+function hasLocalStore() {
+  try { return typeof window !== "undefined" && !!window.localStorage; }
+  catch { return false; }
+}
+function hasStore() { return hasSandboxStore() || hasLocalStore(); }
 
 async function loadData() {
-  if (!hasStore()) return null;
-  try { const r = await window.storage.get(KEY, false); return r ? JSON.parse(r.value) : null; }
-  catch { return null; }
+  if (hasSandboxStore()) {
+    try { const r = await window.storage.get(KEY, false); return r ? JSON.parse(r.value) : null; }
+    catch { return null; }
+  }
+  if (hasLocalStore()) {
+    try { const v = window.localStorage.getItem(KEY); return v ? JSON.parse(v) : null; }
+    catch { return null; }
+  }
+  return null;
 }
 async function persist(d) {
-  if (!hasStore()) return;
-  try { await window.storage.set(KEY, JSON.stringify(d), false); } catch {}
+  if (hasSandboxStore()) {
+    try { await window.storage.set(KEY, JSON.stringify(d), false); return; } catch {}
+  }
+  if (hasLocalStore()) {
+    try { window.localStorage.setItem(KEY, JSON.stringify(d)); } catch {}
+  }
+}
+async function clearData() {
+  if (hasSandboxStore()) {
+    try { await window.storage.delete(KEY, false); } catch {}
+  }
+  if (hasLocalStore()) {
+    try { window.localStorage.removeItem(KEY); } catch {}
+  }
 }
 
 function seedCards() {
@@ -1177,9 +1200,10 @@ function AddCards({ onAdd }) {
 
 /* ═══════════════════════════ BROWSE ═══════════════════════════ */
 
-function Browse({ cards, settings, onDelete, onSettings, onReset }) {
+function Browse({ cards, settings, onDelete, onSettings, onReset, onResetAll }) {
   const [q, setQ] = useState("");
   const [confirmReset, setConfirmReset] = useState(false);
+  const [confirmResetAll, setConfirmResetAll] = useState(false);
   const now = Date.now();
 
   const filtered = cards
@@ -1238,6 +1262,21 @@ function Browse({ cards, settings, onDelete, onSettings, onReset }) {
           <button onClick={() => setConfirmReset(true)}
             className="inline-flex items-center gap-2 text-sm text-stone-400 hover:text-rose-500">
             <RotateCcw size={13} /> Reset all progress
+          </button>
+        )}
+      </div>
+
+      <div className="pt-2 border-t border-stone-200">
+        {confirmResetAll ? (
+          <div className="flex items-center gap-2.5">
+            <span className="text-sm text-stone-500 flex-1">Delete all cards and restore the default deck? This erases everything.</span>
+            <Btn kind="danger" onClick={() => { onResetAll(); setConfirmResetAll(false); }}>Erase</Btn>
+            <Btn onClick={() => setConfirmResetAll(false)}>Cancel</Btn>
+          </div>
+        ) : (
+          <button onClick={() => setConfirmResetAll(true)}
+            className="inline-flex items-center gap-2 text-sm text-stone-400 hover:text-rose-500">
+            <Trash2 size={13} /> Reset app (delete all cards)
           </button>
         )}
       </div>
@@ -1674,6 +1713,10 @@ export default function App() {
                   cards: d.cards.map((c) => ({ ...c, ease: 2.5, interval: 0, reps: 0, lapses: 0, due: 0, state: "new" })),
                   daily: { day: todayStr(), newDone: 0 },
                 }))}
+                onResetAll={async () => {
+                  await clearData();
+                  commit(() => ({ v: 1, cards: seedCards(), settings: { newPerDay: 20 }, daily: { day: todayStr(), newDone: 0 } }));
+                }}
               />
             </div>
           </div>
