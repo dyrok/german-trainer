@@ -1065,25 +1065,45 @@ function parsePaste(text) {
   });
 }
 
-async function callAI(notes) {
-  const res = await fetch("https://api.anthropic.com/v1/messages", {
+const GROQ_KEY = "groq_api_key";
+const GROQ_MODEL = "llama-3.3-70b-versatile";
+function loadGroqKey() {
+  try { return (typeof window !== "undefined" && window.localStorage.getItem(GROQ_KEY)) || ""; }
+  catch { return ""; }
+}
+function saveGroqKey(k) {
+  try { if (k) window.localStorage.setItem(GROQ_KEY, k); else window.localStorage.removeItem(GROQ_KEY); }
+  catch {}
+}
+
+async function callAI(notes, apiKey) {
+  if (!apiKey) throw new Error("Missing Groq API key");
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + apiKey },
     body: JSON.stringify({
-      model: "claude-sonnet-4-6", max_tokens: 1000,
+      model: GROQ_MODEL,
+      temperature: 0.3,
+      response_format: { type: "json_object" },
       messages: [{ role: "user", content:
         "Turn these study notes into spaced-repetition flashcards.\n" +
-        "Return ONLY a JSON array — no markdown, no backticks.\n" +
-        "Each item: {\"front\":\"...\",\"back\":\"...\"}. One atomic fact per card. Max 20 cards.\n\n" +
+        "Return ONLY a JSON object of the form {\"cards\":[{\"front\":\"...\",\"back\":\"...\"}]} — no markdown, no backticks.\n" +
+        "One atomic fact per card. Max 20 cards.\n\n" +
         "NOTES:\n" + notes
       }],
     }),
   });
-  if (!res.ok) throw new Error("HTTP " + res.status);
+  if (!res.ok) {
+    let msg = "HTTP " + res.status;
+    try { const e = await res.json(); if (e?.error?.message) msg = e.error.message; } catch {}
+    throw new Error(msg);
+  }
   const d = await res.json();
-  let txt = d.content.filter((b) => b.type === "text").map((b) => b.text).join("").trim();
+  let txt = (d.choices?.[0]?.message?.content || "").trim();
   txt = txt.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim();
-  return JSON.parse(txt).filter((x) => x.front && x.back);
+  const parsed = JSON.parse(txt);
+  const arr = Array.isArray(parsed) ? parsed : (parsed.cards || []);
+  return arr.filter((x) => x.front && x.back).map((x) => ({ front: String(x.front), back: String(x.back) }));
 }
 
 function AddCards({ onAdd }) {
@@ -1096,14 +1116,22 @@ function AddCards({ onAdd }) {
   const [aiCards, setAiCards] = useState([]);
   const [loading, setLoading] = useState(false);
   const [err,     setErr]     = useState("");
+  const [apiKey,  setApiKey]  = useState(loadGroqKey);
 
   const parsed = parsePaste(bulk);
 
+  function updateKey(k) { setApiKey(k); saveGroqKey(k.trim()); }
+
   async function generate() {
     if (!notes.trim()) return;
+    if (!apiKey.trim()) { setErr("Add your Groq API key first."); return; }
     setErr(""); setLoading(true); setAiCards([]);
-    try { setAiCards(await callAI(notes.trim())); }
-    catch { setErr("AI unavailable here — try paste or type instead."); }
+    try {
+      const cards = await callAI(notes.trim(), apiKey.trim());
+      if (!cards.length) setErr("No cards generated — try different notes.");
+      setAiCards(cards);
+    }
+    catch (e) { setErr("Groq error: " + (e?.message || "request failed")); }
     setLoading(false);
   }
 
@@ -1140,7 +1168,14 @@ function AddCards({ onAdd }) {
 
       {tab === "ai" && (
         <div>
-          <p className="text-xs text-stone-400 mb-2">Paste any notes — AI generates atomic flashcards. Review before adding.</p>
+          <p className="text-xs text-stone-400 mb-2">Paste any notes — AI generates atomic flashcards via Groq. Review before adding.</p>
+          <div className="mb-3">
+            <label className="block text-xs text-stone-400 mb-1">
+              Groq API key — <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" className="text-teal-600 hover:underline">get one free</a> · stored only in this browser
+            </label>
+            <input type="password" value={apiKey} onChange={(e) => updateKey(e.target.value)} placeholder="gsk_…" autoComplete="off"
+              className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm font-mono focus:outline-none focus:border-teal-400" />
+          </div>
           <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={6} maxLength={4000}
             placeholder="Paste vocab lists, bullet notes, definitions…"
             className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
