@@ -1683,14 +1683,23 @@ function TimedQuiz({ subject, subjectLabel = "this subject" }) {
 
 /* ═══════════════════════════ AI TUTOR ═══════════════════════════ */
 
+function tutorKey(label) { return "tutor_chat_" + label; }
+function loadTutor(label) {
+  try { return JSON.parse(window.localStorage.getItem(tutorKey(label)) || "[]"); } catch { return []; }
+}
+function saveTutor(label, msgs) {
+  try { window.localStorage.setItem(tutorKey(label), JSON.stringify(msgs.slice(-50))); } catch {}
+}
+
 function Tutor({ subjectLabel = "this subject" }) {
-  const [msgs, setMsgs]       = useState([]);
+  const [msgs, setMsgs]       = useState(() => loadTutor(subjectLabel));
   const [input, setInput]     = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr]         = useState("");
   const endRef = useRef(null);
 
   useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, loading]);
+  useEffect(() => { saveTutor(subjectLabel, msgs); }, [msgs, subjectLabel]);
 
   const suggestions = subjectLabel === "React"
     ? ["What's the difference between props and state?", "Explain useEffect dependency arrays", "When should I make a custom hook?"]
@@ -1712,6 +1721,15 @@ function Tutor({ subjectLabel = "this subject" }) {
 
   return (
     <div className="rounded-2xl border border-stone-200 bg-white flex flex-col" style={{ height: "60vh" }}>
+      {msgs.length > 0 && (
+        <div className="flex items-center justify-between border-b border-stone-200 px-3 py-1.5">
+          <span className="text-xs text-stone-400">{msgs.length} message{msgs.length !== 1 ? "s" : ""} · saved</span>
+          <button onClick={() => setMsgs([])}
+            className="inline-flex items-center gap-1 text-xs text-stone-400 hover:text-rose-500 transition-colors">
+            <Trash2 size={12} /> Clear
+          </button>
+        </div>
+      )}
       <div className="flex-1 overflow-auto p-3 space-y-3">
         {msgs.length === 0 && !loading && (
           <div className="h-full flex flex-col items-center justify-center text-center px-4">
