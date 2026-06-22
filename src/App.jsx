@@ -268,6 +268,14 @@ function shuffle(arr) {
 function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
 function pad2(n)   { return n < 10 ? "0" + n : "" + n; }
 function todayStr(){ return new Date().toISOString().slice(0, 10); }
+function yesterdayStr(){ return new Date(Date.now() - 86400000).toISOString().slice(0, 10); }
+// Advance the daily streak when the user studies; returns the updated streak object.
+function bumpStreak(streak) {
+  const today = todayStr();
+  if (streak && streak.lastDay === today) return streak;          // already counted today
+  const count = streak && streak.lastDay === yesterdayStr() ? streak.count + 1 : 1;
+  return { count, lastDay: today };
+}
 
 function n2g(n) {
   if (n === 0) return "null";
@@ -454,7 +462,7 @@ function seedAll() { return [...seedCards(), ...seedReactCards()]; }
 
 function freshData() {
   return { v: 2, subject: "german", cards: seedAll(),
-    settings: { newPerDay: 20 }, daily: { day: todayStr(), newDone: 0 } };
+    settings: { newPerDay: 20 }, daily: { day: todayStr(), newDone: 0 }, streak: { count: 0, lastDay: null } };
 }
 
 // Upgrade older saved data: tag legacy cards as german, ensure React cards exist, ensure a subject.
@@ -462,7 +470,7 @@ function migrate(d) {
   if (!d) return freshData();
   let cards = d.cards.map((c) => c.subject ? c : { ...c, subject: "german" });
   if (!cards.some((c) => c.subject === "react")) cards = [...cards, ...seedReactCards()];
-  return { ...d, v: 2, subject: d.subject || "german", cards };
+  return { ...d, v: 2, subject: d.subject || "german", cards, streak: d.streak || { count: 0, lastDay: null } };
 }
 
 // Build a randomized React quiz in Exam format (options shuffled each round)
@@ -1968,6 +1976,12 @@ export default function App() {
   const upcoming   = cards.filter((c) => c.due > now).sort((a, b) => a.due - b.due)[0];
   const inSession  = session || subview;  // hide bottom nav
 
+  // daily streak (global across subjects) — alive only if studied today or yesterday
+  const rawStreak   = data.streak || { count: 0, lastDay: null };
+  const streakAlive = rawStreak.lastDay === todayStr() || rawStreak.lastDay === yesterdayStr();
+  const streakCount = streakAlive ? rawStreak.count : 0;
+  const studiedToday = rawStreak.lastDay === todayStr();
+
   function setSubject(s) {
     commit((d) => ({ ...d, subject: s }));
     setTab("study"); setSubview(null); setSession(false);
@@ -2000,6 +2014,7 @@ export default function App() {
                 ...d,
                 cards: d.cards.map((c) => c.id === updated.id ? updated : c),
                 daily: wasNew ? { ...d.daily, newDone: d.daily.newDone + 1 } : d.daily,
+                streak: bumpStreak(d.streak),
               }));
             }}
             onEnd={() => setSession(false)}
@@ -2099,11 +2114,19 @@ export default function App() {
         {/* ─── STUDY TAB ─── */}
         {tab === "study" && (
           <div className="space-y-5">
-            <div>
-              <h1 className="text-2xl font-bold tracking-tight">
-                <span className="font-serif italic text-teal-700">Spaced</span> Repetition
-              </h1>
-              <p className="text-sm text-stone-400 mt-0.5">Only what's due, only when it matters.</p>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight">
+                  <span className="font-serif italic text-teal-700">Spaced</span> Repetition
+                </h1>
+                <p className="text-sm text-stone-400 mt-0.5">Only what's due, only when it matters.</p>
+              </div>
+              {streakCount > 0 && (
+                <div className={`shrink-0 inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold ${studiedToday ? "bg-orange-50 border-orange-200 text-orange-600" : "bg-stone-50 border-stone-200 text-stone-500"}`}
+                  title={studiedToday ? "Studied today — streak secured" : "Study today to keep your streak alive"}>
+                  <span>🔥</span> {streakCount} day{streakCount !== 1 ? "s" : ""}
+                </div>
+              )}
             </div>
 
             {/* stats + CTA */}
