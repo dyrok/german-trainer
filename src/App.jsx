@@ -681,7 +681,7 @@ function AIExplain({ run, label = "Explain with AI" }) {
 /* ═══════════════════════════ EXAM (MCQ) ═══════════════════════════ */
 
 function Exam({ make, sectioned, onReview, subjectLabel = "this subject", timeLimitSec = 0 }) {
-  const [questions]    = useState(make);
+  const [questions, setQuestions] = useState(make);
   const [qi, setQi]    = useState(0);
   const [picked, setPk] = useState(null);
   const [history, setH]= useState([]);
@@ -767,8 +767,13 @@ function Exam({ make, sectioned, onReview, subjectLabel = "this subject", timeLi
         {timeLimitSec > 0 && timeLeft <= 0 && (
           <p className="mt-2 text-xs text-amber-600">⏱ Time's up — unanswered questions counted as missed.</p>
         )}
-        <div className="mt-5 flex gap-2.5 justify-center">
-          <Btn kind="primary" onClick={() => { setQi(0); setPk(null); setH([]); setShowT(false); setTimeLeft(timeLimitSec); }}>
+        <div className="mt-5 flex flex-wrap gap-2.5 justify-center">
+          {missed.length > 0 && (
+            <Btn kind="primary" onClick={() => { setQuestions(missed.map((h) => h.q)); setQi(0); setPk(null); setH([]); setShowT(false); setTimeLeft(timeLimitSec); }}>
+              <RotateCcw size={15} /> Retry {missed.length} missed
+            </Btn>
+          )}
+          <Btn kind={missed.length > 0 ? "ghost" : "primary"} onClick={() => { setQuestions(make()); setQi(0); setPk(null); setH([]); setShowT(false); setTimeLeft(timeLimitSec); }}>
             <RefreshCw size={15} /> New round
           </Btn>
         </div>
