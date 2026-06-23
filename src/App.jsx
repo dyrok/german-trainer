@@ -1001,10 +1001,10 @@ function Exam({ make, sectioned, onReview, subjectLabel = "this subject", timeLi
 
 /* ═══════════════════════════ SRS SESSION ═══════════════════════════ */
 
-function SRSSession({ cards, maxNew = 20, cram = false, initialQueue = null, initialDone = 0, onRate, onEnd, onProgress, subjectLabel = "this subject" }) {
+function SRSSession({ cards, maxNew = 20, cram = false, studyAll = false, initialQueue = null, initialDone = 0, onRate, onEnd, onProgress, subjectLabel = "this subject" }) {
   function buildQueue() {
     if (initialQueue) return initialQueue.filter((id) => cards.some((c) => c.id === id));
-    if (cram) return shuffle(cards.map((c) => c.id));
+    if (cram || studyAll) return shuffle(cards.map((c) => c.id));
     const now = Date.now();
     const due  = cards.filter((c) => c.state !== "new" && c.due <= now);
     const newC = cards.filter((c) => c.state === "new");
@@ -2323,6 +2323,12 @@ export default function App() {
     setTab("study"); setSubview(null); setSession(null);
   }
 
+  // Study one module via SRS (all its cards; ratings count).
+  function studyModule(deckName) {
+    commit((d) => ({ ...d, session: null }));
+    setSession({ studyAll: true, deck: deckName });
+  }
+
   // Actions exposed to the agentic Tutor.
   const agentActions = {
     getStats: () => ({ subject: subjMeta.label, due: reviewDue, newAvailable: newAvail, total: cards.length, streak: streakCount }),
@@ -2372,6 +2378,8 @@ export default function App() {
 
   if (session) {
     const resuming = session.resume && savedSession;
+    const sessionCards = (!resuming && session.deck) ? cards.filter((c) => c.deck === session.deck) : cards;
+    const moduleLabel = session.deck ? session.deck.replace(/^React · /, "") : null;
     return (
       <>
         <DarkToggle dark={dark} onToggle={toggleDark} />
@@ -2380,10 +2388,12 @@ export default function App() {
             <button onClick={() => setSession(null)} className="inline-flex items-center gap-2 text-sm text-stone-500 hover:text-stone-800 mb-5">
               <ArrowLeft size={17} /> Save &amp; exit
             </button>
+            {moduleLabel && <h2 className="text-lg font-bold text-stone-800 mb-3">Studying · {moduleLabel}</h2>}
           <SRSSession
-            cards={cards}
+            cards={sessionCards}
             maxNew={newAvail}
             cram={session.cram}
+            studyAll={session.studyAll}
             initialQueue={resuming ? savedSession.queue : null}
             initialDone={resuming ? (savedSession.done || 0) : 0}
             subjectLabel={subjMeta.label}
@@ -2428,10 +2438,21 @@ export default function App() {
     else if (subview.startsWith("cards:")) {
       const dname = subview.slice(6);
       title = dname.replace(/^React · /, "");
-      const deckCards = cards.filter((c) => c.deck === dname).map((c) => ({ en: c.front, de: c.back, note: c.note }));
-      content = deckCards.length
-        ? <FlipDrill deck={deckCards} />
-        : <div className="text-sm text-stone-400">This module is empty.</div>;
+      const inDeck = cards.filter((c) => c.deck === dname);
+      const deckCards = inDeck.map((c) => ({ en: c.front, de: c.back, note: c.note }));
+      content = deckCards.length ? (
+        <div className="space-y-4">
+          <button onClick={() => studyModule(dname)}
+            className="w-full rounded-xl bg-teal-600 text-white py-3 text-sm font-semibold hover:bg-teal-700 transition-colors flex items-center justify-center gap-2">
+            <Brain size={17} /> Study this module · {inDeck.length} card{inDeck.length !== 1 ? "s" : ""}
+          </button>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-stone-400">or flip through</span>
+            <div className="h-px flex-1 bg-stone-200" />
+          </div>
+          <FlipDrill deck={deckCards} />
+        </div>
+      ) : <div className="text-sm text-stone-400">This module is empty.</div>;
     }
     else if (subview === "agentquiz") { title = "AI Quiz"; content = agentQuiz && agentQuiz.length
       ? <Exam make={() => agentQuiz} subjectLabel={subjMeta.label} onAddMissed={addMissed} />
