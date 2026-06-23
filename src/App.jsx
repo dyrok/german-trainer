@@ -6,6 +6,7 @@ import {
   RotateCcw, Pencil, ClipboardPaste, Loader2, AlertCircle, BookOpen,
   Shuffle, Sparkles, Search, Trash2, RefreshCw, ListChecks, Layers, Moon, Sun,
   Lightbulb, Send, Cpu, Atom, ChevronDown, Wand2, MessageCircle, Code,
+  Download, Upload, Database,
 } from "lucide-react";
 
 /* ═══════════════════════════ DATA ═══════════════════════════ */
@@ -2268,6 +2269,35 @@ export default function App() {
     showFlash("Added " + created.length + " card(s)" + (decksUsed.length === 1 ? " to '" + decksUsed[0] + "'" : " across " + decksUsed.length + " modules"));
   }
 
+  // Backup / restore — guards progress against any reset.
+  function exportData() {
+    try {
+      const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url; a.download = "german-trainer-backup-" + todayStr() + ".json";
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+      showFlash("Progress exported");
+    } catch { showFlash("Export failed"); }
+  }
+  function importData(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const parsed = JSON.parse(reader.result);
+        if (!parsed || !Array.isArray(parsed.cards)) { showFlash("Invalid backup file"); return; }
+        const migrated = migrate(parsed);
+        setSession(null); setSubview(null); setTab("study");
+        commit(() => migrated);
+        if (migrated.settings && migrated.settings.dark != null) setDark(migrated.settings.dark);
+        showFlash("Restored " + migrated.cards.length + " cards");
+      } catch { showFlash("Could not read that backup file"); }
+    };
+    reader.readAsText(file);
+  }
+
   // global Escape key
   useEffect(() => {
     function onKey(e) {
@@ -2747,6 +2777,26 @@ export default function App() {
                 }}
                 subjectLabel={subjMeta.label}
               />
+            </div>
+
+            <div>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs font-semibold uppercase tracking-wide text-stone-400">Backup &amp; restore</span>
+                <div className="h-px flex-1 bg-stone-200" />
+              </div>
+              <div className="rounded-2xl border border-stone-200 bg-white px-4 py-3 space-y-3">
+                <div className="flex items-center gap-1.5 text-sm font-semibold text-stone-700"><Database size={14} className="text-teal-600" /> Your progress</div>
+                <p className="text-xs text-stone-400 leading-relaxed">Save a backup file with all your cards and progress, then restore it on any device or after a reset.</p>
+                <div className="flex gap-2">
+                  <Btn onClick={exportData}><Download size={15} /> Export backup</Btn>
+                  <label className="inline-flex items-center justify-center gap-2 rounded-xl text-sm font-medium px-4 py-2.5 bg-white text-stone-700 border border-stone-200 hover:bg-stone-50 cursor-pointer">
+                    <Upload size={15} /> Restore
+                    <input type="file" accept="application/json,.json" className="hidden"
+                      onChange={(e) => { importData(e.target.files && e.target.files[0]); e.target.value = ""; }} />
+                  </label>
+                </div>
+                <p className="text-[11px] text-stone-400">Restoring replaces your current progress with the backup's.</p>
+              </div>
             </div>
           </div>
         )}
