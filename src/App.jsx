@@ -255,6 +255,81 @@ const REACT_QUIZ = [
 ];
 const LETTER_IDX = { A: 0, B: 1, C: 2, D: 3 };
 
+/* ─── REACT module flashcards (front=question, back=answer), from the course syllabus ─── */
+const REACT_MODULE_CARDS = [
+  // Intro & setup, modern JS
+  ["Intro", "What problem does React solve?", "Building interactive UIs by describing what the UI should look like for a given state; React efficiently updates the DOM when state changes."],
+  ["Intro", "What is Create React App (CRA)?", "An older official toolchain to scaffold a React project with zero build config. Modern projects prefer Vite."],
+  ["Intro", "What does the React virtual DOM do?", "Keeps an in-memory tree of the UI; on state change React diffs (reconciles) it against the previous tree and applies only the minimal real-DOM updates."],
+  ["Modern JS", "What does ES6 destructuring let you do in React?", "Pull values out of props/state/arrays concisely, e.g. const { title } = props or const [v, setV] = useState()."],
+  ["Modern JS", "Why are arrow functions common in React?", "They have no own 'this' binding, so callbacks and inline handlers behave predictably inside components."],
+  ["Modern JS", "What is the spread operator used for in React?", "Copying/merging arrays and objects immutably, e.g. setState updates like {...obj, key: val} or [...arr, item]."],
+  // Components & props
+  ["Components", "What is a functional component?", "A JavaScript function that takes props and returns JSX. The modern standard for React components."],
+  ["Components", "What are props?", "Read-only inputs passed from a parent to a child component, like attributes on a tag. A child must not mutate them."],
+  ["Components", "What is PropTypes used for?", "Runtime validation of a component's prop types (e.g. PropTypes.string.isRequired) to catch bugs during development."],
+  ["Components", "How do you pass data from child to parent?", "The parent passes a callback function as a prop; the child calls it with the data."],
+  // JSX
+  ["JSX", "What is JSX?", "A syntax extension that lets you write HTML-like markup in JavaScript; it compiles to React.createElement calls."],
+  ["JSX", "How do you write a conditional in JSX?", "Use a ternary {cond ? <A/> : <B/>} or short-circuit {cond && <A/>}; if/else statements can't go inside JSX directly."],
+  ["JSX", "Why does each item in a mapped list need a key?", "Keys give React stable identity for list items so it can update them efficiently and correctly across re-renders."],
+  ["JSX", "Why use className instead of class in JSX?", "'class' is a reserved word in JavaScript, so JSX uses className for the HTML class attribute."],
+  // Hooks
+  ["Hooks", "What does useState return?", "An array: [currentValue, setterFunction]. Calling the setter schedules a re-render with the new value."],
+  ["Hooks", "What does useEffect do?", "Runs side effects (data fetching, subscriptions, DOM work) after render, controlled by its dependency array."],
+  ["Hooks", "What does an empty useEffect dependency array [] mean?", "The effect runs once after the component mounts (and its cleanup runs on unmount)."],
+  ["Hooks", "What is a useEffect cleanup function?", "The function you return from the effect; React runs it before the next effect run and on unmount (e.g. to remove listeners)."],
+  ["Hooks", "What is useContext for?", "Reading a value from a React Context without prop-drilling, giving components access to shared/global state."],
+  ["Hooks", "When should you use useReducer instead of useState?", "When state logic is complex or the next state depends on the previous one, or multiple sub-values change together."],
+  ["Hooks", "What is a custom hook?", "A reusable function whose name starts with 'use' that calls other hooks to share stateful logic between components."],
+  ["Hooks", "What is useRef commonly used for?", "Holding a mutable value that persists across renders without causing re-renders, and referencing DOM nodes."],
+  ["Hooks", "What does useMemo do?", "Memoizes the result of an expensive calculation, recomputing only when its dependencies change."],
+  ["Hooks", "What is the Rules of Hooks?", "Only call hooks at the top level of a component or custom hook, never inside loops/conditions, and only from React functions."],
+  // State management / Redux
+  ["State Mgmt", "What is the Context API?", "React's built-in way to share state app-wide via a Provider that supplies a value to all consuming components."],
+  ["State Mgmt", "What is Redux Toolkit (RTK)?", "The official, opinionated way to write Redux with less boilerplate — configureStore, createSlice, and built-in Immer."],
+  ["State Mgmt", "What is a Redux slice?", "A piece of the store created with createSlice, bundling its reducer logic and auto-generated action creators."],
+  ["State Mgmt", "What is Redux Thunk?", "Middleware that lets action creators return functions, enabling async logic like API calls before dispatching."],
+  ["State Mgmt", "Context API vs Redux — when to use which?", "Context for low-frequency global values (theme, auth); Redux/RTK for large, frequently-updated, complex app state."],
+  // Routing
+  ["Routing", "What does React Router do?", "Maps URL paths to components for client-side routing in a single-page app, without full page reloads."],
+  ["Routing", "How do you read a route parameter in React Router v6?", "Define a path like /user/:id and read it with the useParams() hook."],
+  ["Routing", "How do you make a protected route?", "Wrap or guard the route so it renders the page only if authenticated, otherwise redirect (e.g. <Navigate to='/login' />)."],
+  ["Routing", "Why does a refreshed SPA sub-route 404 on static hosts?", "The server looks for a real file at that path; you must add a rewrite/redirect rule sending all paths to index.html."],
+  // Forms
+  ["Forms", "What is a controlled component?", "A form input whose value is driven by React state and updated via onChange, making React the single source of truth."],
+  ["Forms", "What is Formik used for?", "Managing form state, validation, and submission in complex React forms with less manual wiring."],
+  // Styling
+  ["Styling", "What do CSS Modules provide?", "Locally-scoped CSS class names per component, avoiding global style collisions."],
+  ["Styling", "What are Styled Components?", "A CSS-in-JS library to define styled React components with tagged template literals and dynamic, prop-based styles."],
+  // Performance
+  ["Performance", "What does React.memo do?", "Memoizes a component so it skips re-rendering when its props are unchanged (shallow comparison)."],
+  ["Performance", "What is lazy loading with React.lazy and Suspense?", "Code-splitting that loads a component only when needed, showing a Suspense fallback while it loads — smaller initial bundle."],
+  ["Performance", "What is useCallback for?", "Memoizing a function identity across renders so memoized children/effects don't re-run unnecessarily."],
+  // Testing
+  ["Testing", "What is Jest?", "A JavaScript testing framework used to run unit/integration tests and make assertions in React projects."],
+  ["Testing", "What is React Testing Library (RTL)?", "A library for testing components the way users interact with them — querying by role/text rather than implementation details."],
+  ["Testing", "Why mock API calls in tests?", "To test components in isolation deterministically, without real network requests or flaky external dependencies."],
+  // API
+  ["API", "How do you fetch data with the Fetch API in React?", "Call fetch() inside useEffect, await res.json(), and store the result in state (handle loading and errors)."],
+  ["API", "Why use Axios over Fetch?", "Axios adds conveniences: automatic JSON parsing, request/response interceptors, timeouts, and simpler error handling."],
+  // Persistence
+  ["Persistence", "How do you persist state in localStorage?", "Write state to localStorage.setItem on change (e.g. in an effect) and read it back with getItem on initialization."],
+  ["Persistence", "What is Redux Persist?", "A library that saves and rehydrates the Redux store to storage so state survives page reloads/sessions."],
+  // Animation
+  ["Animation", "What is React Transition Group?", "A small library that manages mount/unmount transition states so you can animate components entering and leaving."],
+  ["Animation", "What is Framer Motion?", "A declarative animation library (the 'motion' package) for animations, gestures, and layout transitions in React."],
+  // TypeScript
+  ["TypeScript", "Why use TypeScript with React?", "Static typing catches errors at compile time and gives autocomplete/safety for props, state, and hooks."],
+  ["TypeScript", "How do you type a component's props in TS?", "Define an interface/type for the props and annotate the component, e.g. function Btn({label}: {label: string})."],
+  // Next.js
+  ["Next.js", "What is Next.js?", "A React framework adding server-side rendering, static generation, file-based routing, and full-stack features."],
+  ["Next.js", "What is file-based routing in Next.js?", "Routes are created automatically from files in the app/pages directory — the file path becomes the URL."],
+  // Deployment
+  ["Deployment", "What does 'npm run build' produce?", "An optimized, minified production bundle of static assets ready to deploy (Vite outputs it to the dist folder)."],
+  ["Deployment", "What is Continuous Deployment on Netlify/Vercel?", "Connecting your Git repo so every push triggers an automatic rebuild and redeploy of the site."],
+];
+
 /* ═══════════════════════════ PURE HELPERS ═══════════════════════════ */
 
 function shuffle(arr) {
@@ -452,25 +527,30 @@ function seedCards() {
   return out;
 }
 
-// React flashcards derived from the MCQ bank (front = question, back = correct option)
+// React flashcards: MCQ-bank basics + the full syllabus module deck
 function seedReactCards() {
-  return REACT_QUIZ.map((item, i) =>
+  const basics = REACT_QUIZ.map((item, i) =>
     newCard(item.q, item.o[LETTER_IDX[item.c]], "React Basics", null, "r" + i, "react"));
+  const modules = REACT_MODULE_CARDS.map(([deck, q, a], i) =>
+    newCard(q, a, "React · " + deck, null, "rm" + i, "react"));
+  return [...basics, ...modules];
 }
 
 function seedAll() { return [...seedCards(), ...seedReactCards()]; }
 
 function freshData() {
   return { v: 2, subject: "german", cards: seedAll(),
-    settings: { newPerDay: 20 }, daily: { day: todayStr(), newDone: 0 }, streak: { count: 0, lastDay: null } };
+    settings: { newPerDay: 20 }, daily: { day: todayStr(), newDone: 0 }, streak: { count: 0, lastDay: null }, session: null };
 }
 
-// Upgrade older saved data: tag legacy cards as german, ensure React cards exist, ensure a subject.
+// Upgrade older saved data: tag legacy cards german, and merge in any new React seed cards by id.
 function migrate(d) {
   if (!d) return freshData();
   let cards = d.cards.map((c) => c.subject ? c : { ...c, subject: "german" });
-  if (!cards.some((c) => c.subject === "react")) cards = [...cards, ...seedReactCards()];
-  return { ...d, v: 2, subject: d.subject || "german", cards, streak: d.streak || { count: 0, lastDay: null } };
+  const have = new Set(cards.map((c) => c.id));
+  const missing = seedReactCards().filter((rc) => !have.has(rc.id));
+  if (missing.length) cards = [...cards, ...missing];
+  return { ...d, v: 2, subject: d.subject || "german", cards, streak: d.streak || { count: 0, lastDay: null }, session: d.session || null };
 }
 
 // Build a randomized React quiz in Exam format (options shuffled each round)
@@ -875,15 +955,22 @@ function Exam({ make, sectioned, onReview, subjectLabel = "this subject", timeLi
 
 /* ═══════════════════════════ SRS SESSION ═══════════════════════════ */
 
-function SRSSession({ cards, maxNew = 20, onRate, onEnd, subjectLabel = "this subject" }) {
-  const now = Date.now();
-  const due  = cards.filter((c) => c.state !== "new" && c.due <= now);
-  const newC = cards.filter((c) => c.state === "new");
-  const initialQ  = shuffle(due.map((c) => c.id)).concat(newC.slice(0, maxNew).map((c) => c.id));
+function SRSSession({ cards, maxNew = 20, cram = false, initialQueue = null, initialDone = 0, onRate, onEnd, onProgress, subjectLabel = "this subject" }) {
+  function buildQueue() {
+    if (initialQueue) return initialQueue.filter((id) => cards.some((c) => c.id === id));
+    if (cram) return shuffle(cards.map((c) => c.id));
+    const now = Date.now();
+    const due  = cards.filter((c) => c.state !== "new" && c.due <= now);
+    const newC = cards.filter((c) => c.state === "new");
+    return shuffle(due.map((c) => c.id)).concat(newC.slice(0, maxNew).map((c) => c.id));
+  }
 
-  const [queue,   setQueue]   = useState(initialQ);
+  const [queue,   setQueue]   = useState(buildQueue);
   const [flipped, setFlipped] = useState(false);
-  const [done,    setDone]    = useState(0);
+  const [done,    setDone]    = useState(initialDone);
+
+  // report progress so the session can be saved/resumed
+  useEffect(() => { onProgress && onProgress(queue, done, cram); }, [queue, done]);
 
   const card = cards.find((c) => c.id === queue[0]);
 
@@ -902,7 +989,7 @@ function SRSSession({ cards, maxNew = 20, onRate, onEnd, subjectLabel = "this su
   }, [card, flipped, queue]);
 
   function rate(r) {
-    onRate(card, r);
+    onRate(card, r, cram);
     setDone((d) => d + 1);
     setFlipped(false);
     setQueue((q) => {
@@ -917,7 +1004,7 @@ function SRSSession({ cards, maxNew = 20, onRate, onEnd, subjectLabel = "this su
       <div className="text-center py-10">
         <div className="text-5xl mb-2">🎉</div>
         <div className="text-3xl font-bold text-stone-800">{done}</div>
-        <p className="text-stone-500 mt-1">reviews complete</p>
+        <p className="text-stone-500 mt-1">{cram ? "cards practiced" : "reviews complete"}</p>
         <div className="mt-6"><Btn kind="primary" onClick={onEnd}>Done</Btn></div>
       </div>
     );
@@ -1271,6 +1358,29 @@ async function groqChat(messages, { key, model, json = false, temperature = 0.4,
   }
   const d = await res.json();
   return (d.choices?.[0]?.message?.content || "").trim();
+}
+
+// Tool-calling variant — returns the full assistant message (may contain tool_calls).
+async function groqChatRaw(messages, { key, model, tools, temperature = 0.4, max_tokens = 1024 } = {}) {
+  const apiKey = key || loadGroqKey();
+  if (!apiKey) throw new Error("Add your Groq API key in Manage → AI settings first.");
+  const res = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: "Bearer " + apiKey },
+    body: JSON.stringify({
+      model: model || loadGroqModel(),
+      temperature, max_tokens,
+      ...(tools ? { tools, tool_choice: "auto" } : {}),
+      messages,
+    }),
+  });
+  if (!res.ok) {
+    let msg = "HTTP " + res.status;
+    try { const e = await res.json(); if (e?.error?.message) msg = e.error.message; } catch {}
+    throw new Error(msg);
+  }
+  const d = await res.json();
+  return d.choices?.[0]?.message || { role: "assistant", content: "" };
 }
 
 function stripFences(txt) { return txt.replace(/^```(?:json)?/i, "").replace(/```$/, "").trim(); }
@@ -1721,7 +1831,7 @@ function TimedQuiz({ subject, subjectLabel = "this subject", onAddMissed }) {
   );
 }
 
-/* ═══════════════════════════ AI TUTOR ═══════════════════════════ */
+/* ═══════════════════════════ AI TUTOR (agentic) ═══════════════════════════ */
 
 function tutorKey(label) { return "tutor_chat_" + label; }
 function loadTutor(label) {
@@ -1731,7 +1841,21 @@ function saveTutor(label, msgs) {
   try { window.localStorage.setItem(tutorKey(label), JSON.stringify(msgs.slice(-50))); } catch {}
 }
 
-function Tutor({ subjectLabel = "this subject" }) {
+// Tools the agent can call to act inside the app.
+const AGENT_TOOLS = [
+  { type: "function", function: { name: "get_stats", description: "Get current study stats for the active subject (due count, new available, total cards, streak).", parameters: { type: "object", properties: {} } } },
+  { type: "function", function: { name: "list_cards", description: "List/search the user's flashcards for the active subject. Returns ids you can use to edit or delete.", parameters: { type: "object", properties: { query: { type: "string", description: "optional text filter" }, limit: { type: "number", description: "max results, default 20" } } } } },
+  { type: "function", function: { name: "add_flashcards", description: "Create new flashcards for the active subject.", parameters: { type: "object", properties: { cards: { type: "array", items: { type: "object", properties: { front: { type: "string" }, back: { type: "string" } }, required: ["front", "back"] } }, deck: { type: "string", description: "optional deck name" } }, required: ["cards"] } } },
+  { type: "function", function: { name: "edit_card", description: "Edit a flashcard's front and/or back by id (get the id from list_cards).", parameters: { type: "object", properties: { id: { type: "string" }, front: { type: "string" }, back: { type: "string" } }, required: ["id"] } } },
+  { type: "function", function: { name: "delete_card", description: "Delete a flashcard by id.", parameters: { type: "object", properties: { id: { type: "string" } }, required: ["id"] } } },
+  { type: "function", function: { name: "set_new_per_day", description: "Set how many new cards are introduced per day.", parameters: { type: "object", properties: { count: { type: "number" } }, required: ["count"] } } },
+  { type: "function", function: { name: "switch_subject", description: "Switch the active subject.", parameters: { type: "object", properties: { subject: { type: "string", enum: ["german", "react"] } }, required: ["subject"] } } },
+  { type: "function", function: { name: "start_study", description: "Start a study session. mode 'due' studies scheduled cards; mode 'cram' practices all cards (great before a test).", parameters: { type: "object", properties: { mode: { type: "string", enum: ["due", "cram"] } }, required: ["mode"] } } },
+  { type: "function", function: { name: "create_quiz", description: "Generate and open a multiple-choice quiz on a topic for the active subject.", parameters: { type: "object", properties: { topic: { type: "string" }, count: { type: "number", description: "number of questions, default 8" } }, required: ["topic"] } } },
+  { type: "function", function: { name: "reset_progress", description: "Reset all spaced-repetition progress for the active subject (cards become new again). Use only when the user clearly asks.", parameters: { type: "object", properties: {} } } },
+];
+
+function Tutor({ subjectLabel = "this subject", actions }) {
   const [msgs, setMsgs]       = useState(() => loadTutor(subjectLabel));
   const [input, setInput]     = useState("");
   const [loading, setLoading] = useState(false);
@@ -1742,21 +1866,67 @@ function Tutor({ subjectLabel = "this subject" }) {
   useEffect(() => { saveTutor(subjectLabel, msgs); }, [msgs, subjectLabel]);
 
   const suggestions = subjectLabel === "React"
-    ? ["What's the difference between props and state?", "Explain useEffect dependency arrays", "When should I make a custom hook?"]
-    : ["How do German articles work?", "Explain the difference between du and Sie", "Give me 5 useful A1 phrases"];
+    ? ["Add 5 flashcards about useEffect", "Make me a quiz on React hooks", "Start a cram session before my test"]
+    : ["Add 5 flashcards for ordering food", "Quiz me on German articles", "Start studying my due cards"];
+
+  // Execute a tool call against the app; returns a JSON-serializable result.
+  // Navigation tools defer via setNav so the chat reply renders before we leave the tab.
+  async function execTool(name, args, setNav) {
+    const a = actions || {};
+    switch (name) {
+      case "get_stats":      return a.getStats ? a.getStats() : { error: "unavailable" };
+      case "list_cards":     return a.listCards ? a.listCards(args) : { error: "unavailable" };
+      case "add_flashcards": return a.addFlashcards ? a.addFlashcards(args) : { error: "unavailable" };
+      case "edit_card":      return a.editCard ? a.editCard(args) : { error: "unavailable" };
+      case "delete_card":    return a.deleteCard ? a.deleteCard(args) : { error: "unavailable" };
+      case "set_new_per_day":return a.setNewPerDay ? a.setNewPerDay(args) : { error: "unavailable" };
+      case "reset_progress": return a.resetProgress ? a.resetProgress() : { error: "unavailable" };
+      case "switch_subject": setNav(() => a.switchSubject && a.switchSubject(args.subject)); return { ok: true, note: "switching after reply" };
+      case "start_study":    setNav(() => a.startStudy && a.startStudy(args.mode)); return { ok: true, note: "starting session after reply" };
+      case "create_quiz": {
+        const qs = await callAIQuiz(args.topic, undefined, args.count || 8);
+        if (!qs.length) return { error: "could not generate a quiz on that topic" };
+        setNav(() => a.playQuiz && a.playQuiz(qs));
+        return { ok: true, generated: qs.length, note: "opening quiz after reply" };
+      }
+      default: return { error: "unknown tool" };
+    }
+  }
 
   async function send(text) {
     const q = (text ?? input).trim();
     if (!q || loading) return;
-    const next = [...msgs, { role: "user", content: q }];
-    setMsgs(next); setInput(""); setErr(""); setLoading(true);
+    const visible = [...msgs, { role: "user", content: q }];
+    setMsgs(visible); setInput(""); setErr(""); setLoading(true);
+    let pendingNav = null;
     try {
       const sys = { role: "system", content:
-        `You are a friendly, concise ${subjectLabel} tutor. Give clear, correct, example-driven answers and keep them focused. Use short paragraphs; avoid heavy markdown.` };
-      const reply = await groqChat([sys, ...next], { temperature: 0.5, max_tokens: 1024 });
-      setMsgs((m) => [...m, { role: "assistant", content: reply }]);
+        `You are an agentic in-app assistant for a spaced-repetition study app. The active subject is ${subjectLabel}. ` +
+        "You can both answer study questions AND take actions using the provided tools. " +
+        "When the user asks you to do something — add/edit/delete cards, start studying or cramming, make a quiz, switch subject, change settings — DO IT with the right tool instead of telling them how. " +
+        "Use list_cards to get ids before editing or deleting. When writing flashcards, make clear atomic front/back pairs. " +
+        "After acting, confirm what you did in one short sentence. For pure study questions, just answer clearly and concisely." };
+      const work = [sys, ...visible];
+      for (let step = 0; step < 6; step++) {
+        const msg = await groqChatRaw(work, { tools: AGENT_TOOLS, temperature: 0.4, max_tokens: 1200 });
+        work.push(msg);
+        if (msg.tool_calls && msg.tool_calls.length) {
+          for (const call of msg.tool_calls) {
+            let parsed = {};
+            try { parsed = JSON.parse(call.function.arguments || "{}"); } catch {}
+            let result;
+            try { result = await execTool(call.function.name, parsed, (fn) => { pendingNav = fn; }); }
+            catch (e) { result = { error: e?.message || "tool failed" }; }
+            work.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) });
+          }
+          continue; // let the model react to tool results
+        }
+        if (msg.content) setMsgs((m) => [...m, { role: "assistant", content: msg.content }]);
+        break;
+      }
     } catch (e) { setErr(e?.message || "request failed"); }
     setLoading(false);
+    if (pendingNav) setTimeout(pendingNav, 60); // navigate after the reply renders & saves
   }
 
   return (
@@ -1926,7 +2096,8 @@ export default function App() {
   const [data,     setData]     = useState(null);
   const [tab,      setTab]      = useState("study");   // study | practice | manage
   const [subview,  setSubview]  = useState(null);      // null = home, else string
-  const [session,  setSession]  = useState(false);     // SRS session active
+  const [agentQuiz, setAgentQuiz] = useState(null);    // questions the agent generated to play
+  const [session,  setSession]  = useState(null);      // null | { cram, resume } when active
   const [flash,    setFlash]    = useState("");
   const [persistent, setPersistent] = useState(true);
   const [dark, setDark] = useState(false);
@@ -1977,7 +2148,7 @@ export default function App() {
   useEffect(() => {
     function onKey(e) {
       if (e.key === "Escape") {
-        if (session) { setSession(false); }
+        if (session) { setSession(null); }
         else if (subview) setSubview(null);
         else if (tab !== "study") setTab("study");
       }
@@ -2016,8 +2187,46 @@ export default function App() {
 
   function setSubject(s) {
     commit((d) => ({ ...d, subject: s }));
-    setTab("study"); setSubview(null); setSession(false);
+    setTab("study"); setSubview(null); setSession(null);
   }
+
+  // Actions exposed to the agentic Tutor.
+  const agentActions = {
+    getStats: () => ({ subject: subjMeta.label, due: reviewDue, newAvailable: newAvail, total: cards.length, streak: streakCount }),
+    listCards: ({ query, limit = 20 } = {}) => cards
+      .filter((c) => !query || (c.front + c.back + c.deck).toLowerCase().includes(String(query).toLowerCase()))
+      .slice(0, Math.min(50, limit))
+      .map((c) => ({ id: c.id, front: c.front, back: c.back, deck: c.deck, state: c.state })),
+    addFlashcards: ({ cards: list = [], deck } = {}) => {
+      const clean = list.filter((c) => c && c.front && c.back).map((c) => ({ front: String(c.front), back: String(c.back) }));
+      if (!clean.length) return { error: "no valid cards" };
+      addCards(clean, deck || "AI Added");
+      return { added: clean.length, deck: deck || "AI Added" };
+    },
+    editCard: ({ id, front, back } = {}) => {
+      if (!data.cards.some((c) => c.id === id)) return { error: "card id not found" };
+      commit((d) => ({ ...d, cards: d.cards.map((c) => c.id === id ? { ...c, ...(front != null ? { front: String(front) } : {}), ...(back != null ? { back: String(back) } : {}) } : c) }));
+      return { ok: true };
+    },
+    deleteCard: ({ id } = {}) => {
+      if (!data.cards.some((c) => c.id === id)) return { error: "card id not found" };
+      commit((d) => ({ ...d, cards: d.cards.filter((c) => c.id !== id) }));
+      return { ok: true };
+    },
+    setNewPerDay: ({ count } = {}) => {
+      const n = Math.max(1, Math.round(count || 0));
+      commit((d) => ({ ...d, settings: { ...d.settings, newPerDay: n } }));
+      return { ok: true, newPerDay: n };
+    },
+    resetProgress: () => {
+      commit((d) => ({ ...d, cards: d.cards.map((c) => (c.subject || "german") === subject
+        ? { ...c, ease: 2.5, interval: 0, reps: 0, lapses: 0, due: 0, state: "new" } : c), daily: { day: todayStr(), newDone: 0 } }));
+      return { ok: true };
+    },
+    switchSubject: (s) => { if (SUBJECTS[s]) setSubject(s); },
+    startStudy: (mode) => { commit((d) => ({ ...d, session: null })); setSession({ cram: mode === "cram" }); },
+    playQuiz: (questions) => { setAgentQuiz(questions); setSubview("agentquiz"); },
+  };
 
   // ── SRS session ──
   const toggleDark = () => {
@@ -2026,30 +2235,42 @@ export default function App() {
     commit((d) => ({ ...d, settings: { ...d.settings, dark: nd } }));
   };
 
+  const savedSession = data.session && data.session.subject === subject ? data.session : null;
+
   if (session) {
+    const resuming = session.resume && savedSession;
     return (
       <>
         <DarkToggle dark={dark} onToggle={toggleDark} />
         <div className="min-h-screen bg-stone-100">
           <div className="mx-auto max-w-xl px-4 py-6">
-            <button onClick={() => setSession(false)} className="inline-flex items-center gap-2 text-sm text-stone-500 hover:text-stone-800 mb-5">
-              <ArrowLeft size={17} /> End session
+            <button onClick={() => setSession(null)} className="inline-flex items-center gap-2 text-sm text-stone-500 hover:text-stone-800 mb-5">
+              <ArrowLeft size={17} /> Save &amp; exit
             </button>
           <SRSSession
             cards={cards}
             maxNew={newAvail}
+            cram={session.cram}
+            initialQueue={resuming ? savedSession.queue : null}
+            initialDone={resuming ? (savedSession.done || 0) : 0}
             subjectLabel={subjMeta.label}
-            onRate={(card, rating) => {
-              const updated = schedule(card, rating);
-              const wasNew  = card.state === "new";
-              commit((d) => ({
-                ...d,
-                cards: d.cards.map((c) => c.id === updated.id ? updated : c),
-                daily: wasNew ? { ...d.daily, newDone: d.daily.newDone + 1 } : d.daily,
-                streak: bumpStreak(d.streak),
-              }));
+            onRate={(card, rating, isCram) => {
+              commit((d) => {
+                const base = { ...d, streak: bumpStreak(d.streak) };
+                if (isCram) return base; // scheduling-neutral practice
+                const updated = schedule(card, rating);
+                const wasNew  = card.state === "new";
+                return {
+                  ...base,
+                  cards: d.cards.map((c) => c.id === updated.id ? updated : c),
+                  daily: wasNew ? { ...d.daily, newDone: d.daily.newDone + 1 } : d.daily,
+                };
+              });
             }}
-            onEnd={() => setSession(false)}
+            onProgress={(queue, done, cram) => {
+              commit((d) => ({ ...d, session: queue.length ? { subject, cram, queue, done } : null }));
+            }}
+            onEnd={() => setSession(null)}
           />
           </div>
         </div>
@@ -2071,6 +2292,9 @@ export default function App() {
     else if (subview === "reactquiz") { title = "React Quiz"; content = <Exam make={() => makeReactQuiz(15)} subjectLabel="React" onAddMissed={addMissed} />; }
     else if (subview === "aiquiz")    { title = "AI Quiz Generator"; content = <AIQuizMaker subjectLabel={subjMeta.label} onAddMissed={addMissed} />; }
     else if (subview === "timed")     { title = "Timed Sprint"; content = <TimedQuiz subject={subject} subjectLabel={subjMeta.label} onAddMissed={addMissed} />; }
+    else if (subview === "agentquiz") { title = "AI Quiz"; content = agentQuiz && agentQuiz.length
+      ? <Exam make={() => agentQuiz} subjectLabel={subjMeta.label} onAddMissed={addMissed} />
+      : <div className="text-sm text-stone-400">No quiz to show.</div>; }
     else if (subview.startsWith("test:")) {
       const n = subview.split(":")[1];
       title = "Mock Test " + n;
@@ -2179,8 +2403,15 @@ export default function App() {
                 </div>
               </div>
 
+              {savedSession && (
+                <button onClick={() => setSession({ cram: savedSession.cram, resume: true })}
+                  className="w-full mb-2 rounded-xl bg-violet-600 text-white py-3 text-base font-semibold hover:bg-violet-700 transition-colors flex items-center justify-center gap-2">
+                  <RotateCcw size={18} /> Resume {savedSession.cram ? "practice" : "session"} · {savedSession.queue.length} left
+                </button>
+              )}
+
               {dueTotal > 0 ? (
-                <button onClick={() => setSession(true)}
+                <button onClick={() => { commit((d) => ({ ...d, session: null })); setSession({ cram: false }); }}
                   className="w-full rounded-xl bg-teal-600 text-white py-3 text-base font-semibold hover:bg-teal-700 transition-colors flex items-center justify-center gap-2">
                   <Brain size={19} /> Study {dueTotal} card{dueTotal !== 1 ? "s" : ""}
                 </button>
@@ -2191,6 +2422,14 @@ export default function App() {
                     {upcoming ? "Next review " + relTime(upcoming.due) : "Add cards to begin"}
                   </div>
                 </div>
+              )}
+
+              {cards.length > 0 && (
+                <button onClick={() => { commit((d) => ({ ...d, session: null })); setSession({ cram: true }); }}
+                  className="w-full mt-2 rounded-xl border border-teal-300 text-teal-700 py-2.5 text-sm font-semibold hover:bg-teal-50 transition-colors flex items-center justify-center gap-2"
+                  title="Practice all cards now, ignoring the schedule — great before a test">
+                  <Layers size={17} /> Study more · cram all {cards.length}
+                </button>
               )}
             </div>
 
@@ -2332,9 +2571,9 @@ export default function App() {
               <h1 className="text-2xl font-bold tracking-tight">
                 <span className="font-serif italic text-teal-700">AI</span> Tutor
               </h1>
-              <p className="text-sm text-stone-400 mt-0.5">Ask anything about {subjMeta.label}. Powered by Groq.</p>
+              <p className="text-sm text-stone-400 mt-0.5">Ask or tell me to do things in {subjMeta.label} — I can add cards, make quizzes, start studying, and more.</p>
             </div>
-            <Tutor subjectLabel={subjMeta.label} />
+            <Tutor subjectLabel={subjMeta.label} actions={agentActions} />
           </div>
         )}
       </div>
