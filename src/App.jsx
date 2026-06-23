@@ -7,8 +7,9 @@ import {
   Shuffle, Sparkles, Search, Trash2, RefreshCw, ListChecks, Layers, Moon, Sun,
   Lightbulb, Send, Cpu, Atom, ChevronDown, Wand2, MessageCircle, Code,
   Download, Upload, Database, HelpCircle, Binary, Play, Pause, SkipForward, BookText, GitBranch,
-  Network, LineChart, Calculator,
+  Network, LineChart, Calculator, Crown, Users as UsersIcon,
 } from "lucide-react";
+import { initFirebase, emailKey, cloudSave, cloudLoad, cloudLeaderboard, cloudAllPlayers, ADMIN_EMAIL } from "./firebase.js";
 
 /* ═══════════════════════════ DATA ═══════════════════════════ */
 
@@ -922,6 +923,102 @@ function XpStrip({ game, onProfile }) {
       </div>
       <div className="shrink-0 inline-flex items-center gap-1 text-sm font-semibold text-amber-600">🪙 {game.coins}</div>
     </button>
+  );
+}
+
+// Capture name + email to join the cross-device leaderboard.
+function JoinLeaderboard({ onJoin }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const valid = name.trim() && /\S+@\S+\.\S+/.test(email);
+  return (
+    <div className="rounded-2xl border border-teal-200 bg-teal-50 p-4 space-y-2.5">
+      <div className="flex items-center gap-1.5 text-sm font-semibold text-teal-800"><Trophy size={15} /> Join the leaderboard</div>
+      <p className="text-xs text-stone-600">Add your name &amp; email to compete and sync your progress across devices.</p>
+      <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
+      <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="you@email.com" autoComplete="email" className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
+      <button disabled={!valid} onClick={() => onJoin(name, email)} className="w-full rounded-xl bg-teal-600 text-white py-2.5 text-sm font-semibold hover:bg-teal-700 disabled:opacity-40">Join</button>
+      <p className="text-[11px] text-stone-400">Your email is used only to sync &amp; identify your account — it's never shown to other players.</p>
+    </div>
+  );
+}
+
+// Compulsory lightweight login (name + email) — no password; identifies the account
+// for cross-device sync + leaderboard.
+function LoginGate({ onSubmit }) {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const valid = name.trim() && /\S+@\S+\.\S+/.test(email);
+  return (
+    <div className="min-h-screen bg-stone-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-sm rounded-2xl border border-stone-200 bg-white p-6 space-y-4">
+        <div className="flex justify-center"><div className="w-12 h-12 rounded-2xl bg-teal-600 text-white flex items-center justify-center"><Trophy size={24} /></div></div>
+        <div className="text-center">
+          <h1 className="text-2xl font-bold tracking-tight">Sign in</h1>
+          <p className="text-sm text-stone-500 mt-1">Enter your name and email to save your progress, sync it across devices, and join the leaderboard.</p>
+        </div>
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Your name" autoFocus className="w-full rounded-xl border border-stone-200 px-3 py-2.5 text-sm focus:outline-none focus:border-teal-400" />
+        <input value={email} onChange={(e) => setEmail(e.target.value)} type="email" placeholder="you@email.com" autoComplete="email"
+          onKeyDown={(e) => { if (e.key === "Enter" && valid) onSubmit(name, email); }}
+          className="w-full rounded-xl border border-stone-200 px-3 py-2.5 text-sm focus:outline-none focus:border-teal-400" />
+        <button disabled={!valid} onClick={() => onSubmit(name, email)} className="w-full rounded-xl bg-teal-600 text-white py-3 font-semibold hover:bg-teal-700 disabled:opacity-40 transition-colors">Continue</button>
+        <p className="text-[11px] text-stone-400 text-center">No password needed. Your email identifies your account and is never shown to other players.</p>
+      </div>
+    </div>
+  );
+}
+
+function Leaderboard({ meKey }) {
+  const [rows, setRows] = useState(null);
+  const load = () => { setRows(null); cloudLeaderboard(100).then(setRows); };
+  useEffect(load, []);
+  if (rows === null) return <div className="text-sm text-stone-400 py-3 text-center"><Loader2 size={16} className="animate-spin inline" /> loading…</div>;
+  if (!rows.length) return <div className="text-sm text-stone-400 py-3 text-center">No players yet — be the first! <button onClick={load} className="text-teal-600 underline">refresh</button></div>;
+  return (
+    <div className="space-y-1.5">
+      {rows.map((r, i) => (
+        <div key={r.id} className={`flex items-center gap-3 rounded-xl border px-3 py-2 ${r.id === meKey ? "border-teal-300 bg-teal-50" : "border-stone-200 bg-white"}`}>
+          <span className={`w-6 text-center font-bold ${i < 3 ? "text-amber-500" : "text-stone-400"}`}>{i + 1}</span>
+          <span className="flex-1 truncate text-sm font-medium text-stone-800">{r.name || "Anonymous"}{r.id === meKey ? " (you)" : ""}</span>
+          <span className="text-xs text-stone-400">Lv {r.level || 1}</span>
+          <span className="text-sm font-semibold text-teal-600">{r.xp || 0} XP</span>
+        </div>
+      ))}
+      <button onClick={load} className="w-full text-xs text-stone-400 hover:text-teal-600 pt-1">Refresh</button>
+    </div>
+  );
+}
+
+function AdminPanel() {
+  const [rows, setRows] = useState(null);
+  const [q, setQ] = useState("");
+  useEffect(() => { cloudAllPlayers().then(setRows); }, []);
+  const shown = (rows || []).filter((r) => !q || ((r.name || "") + " " + (r.email || "")).toLowerCase().includes(q.toLowerCase())).sort((a, b) => (b.xp || 0) - (a.xp || 0));
+  const exportCsv = () => {
+    const data = [["name", "email", "xp", "level", "streak"], ...shown.map((r) => [r.name, r.email, r.xp, r.level, r.streak])]
+      .map((a) => a.map((x) => `"${(x ?? "").toString().replace(/"/g, '""')}"`).join(",")).join("\n");
+    const url = URL.createObjectURL(new Blob([data], { type: "text/csv" }));
+    const a = document.createElement("a"); a.href = url; a.download = "players.csv"; a.click(); setTimeout(() => URL.revokeObjectURL(url), 800);
+  };
+  return (
+    <div className="space-y-2">
+      <div className="flex gap-2">
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search users…" className="flex-1 rounded-xl border border-stone-200 px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
+        <Btn onClick={exportCsv}><Download size={14} /> CSV</Btn>
+      </div>
+      {rows === null ? <div className="text-sm text-stone-400 py-3 text-center"><Loader2 size={16} className="animate-spin inline" /> loading…</div> : (
+        <div className="space-y-1 max-h-80 overflow-auto">
+          {shown.map((r) => (
+            <div key={r.id} className="rounded-lg border border-stone-200 bg-white px-3 py-2 text-xs">
+              <div className="font-semibold text-stone-800">{r.name || "Anonymous"}</div>
+              <div className="text-stone-500 break-all">{r.email || "—"} · Lv {r.level || 1} · {r.xp || 0} XP · 🔥{r.streak || 0}</div>
+            </div>
+          ))}
+          {!shown.length && <div className="text-sm text-stone-400 py-2 text-center">No users.</div>}
+        </div>
+      )}
+      <div className="text-[11px] text-stone-400">{(rows || []).length} total users</div>
+    </div>
   );
 }
 
@@ -3618,6 +3715,12 @@ export default function App() {
 
   function showFlash(msg) { setFlash(msg); setTimeout(() => setFlash(""), 2500); }
 
+  function setProfile(name, email) {
+    commit((d) => ({ ...d, profile: { name: name.trim(), email: email.trim().toLowerCase() } }));
+    cloudLoaded.current = false; // allow a fresh cloud pull for this email
+    showFlash("Joined the leaderboard!");
+  }
+
   function buyItem(item) {
     const g = data.game || defaultGame();
     if ((g.cosmetics.owned || []).includes(item.id) || g.coins < item.cost) return;
@@ -3761,6 +3864,37 @@ export default function App() {
     if (subview && subview.startsWith("viz:") && !(g.flags && g.flags.viz)) gameEvent("flag", { flag: "viz" });
   }, [tab, subview]);
 
+  // ── Firebase: init + cross-device cloud sync (keyed by email) ──
+  useEffect(() => { initFirebase(); }, []);
+  const cloudLoaded = useRef(false);
+  // Pull newer cloud progress once, when an email is known.
+  useEffect(() => {
+    const email = data && data.profile && data.profile.email;
+    if (!email || cloudLoaded.current) return;
+    cloudLoaded.current = true;
+    cloudLoad(emailKey(email)).then((remote) => {
+      let localTs = 0; try { localTs = +window.localStorage.getItem("gt_cloud_ts") || 0; } catch {}
+      if (remote && remote.save && (remote.updatedAt || 0) > localTs) {
+        try { window.localStorage.setItem("gt_cloud_ts", String(remote.updatedAt)); } catch {}
+        commit(() => migrate(remote.save));
+        showFlash("Synced your progress from the cloud");
+      }
+    });
+  }, [data && data.profile && data.profile.email]);
+  // Push progress to the cloud (debounced) whenever it changes.
+  useEffect(() => {
+    const email = data && data.profile && data.profile.email;
+    if (!email) return;
+    const t = setTimeout(() => {
+      const ts = Date.now();
+      const lvl = levelInfo(data.game.xp).level;
+      cloudSave(emailKey(email), { name: data.profile.name || "", email, xp: data.game.xp, level: lvl,
+        streak: (data.streak && data.streak.count) || 0, longestStreak: data.game.longestStreak || 0, save: data, updatedAt: ts })
+        .then((ok) => { if (ok) { try { window.localStorage.setItem("gt_cloud_ts", String(ts)); } catch {} } });
+    }, 2500);
+    return () => clearTimeout(t);
+  }, [data]);
+
   if (!onboarded) {
     return <Onboarding onDone={() => setOnboarded(true)} />;
   }
@@ -3771,6 +3905,11 @@ export default function App() {
         <Loader2 className="animate-spin text-teal-600" size={24} />
       </div>
     );
+  }
+
+  // Compulsory login — required for new and existing users before using the app.
+  if (!data.profile || !data.profile.email) {
+    return <LoginGate onSubmit={setProfile} />;
   }
 
   const { settings } = data;
@@ -4477,6 +4616,22 @@ export default function App() {
                 <div className="rounded-2xl border border-stone-200 bg-white p-3 text-center"><div className="text-2xl font-bold text-teal-600">{game.stats.reviews}</div><div className="text-[11px] text-stone-400 mt-0.5">reviews</div></div>
                 <div className="rounded-2xl border border-stone-200 bg-white p-3 text-center"><div className="text-2xl font-bold text-stone-700">{unlocked}/{ACHIEVEMENTS.length}</div><div className="text-[11px] text-stone-400 mt-0.5">trophies</div></div>
               </div>
+
+              {/* leaderboard / join */}
+              <div>
+                <div className="flex items-center gap-2 mb-2.5"><span className="text-xs font-semibold uppercase tracking-wide text-stone-400">Leaderboard</span><div className="h-px flex-1 bg-stone-200" /></div>
+                {data.profile && data.profile.email
+                  ? <Leaderboard meKey={emailKey(data.profile.email)} />
+                  : <JoinLeaderboard onJoin={setProfile} />}
+              </div>
+
+              {/* admin panel */}
+              {data.profile && data.profile.email === ADMIN_EMAIL && (
+                <div>
+                  <div className="flex items-center gap-2 mb-2.5"><span className="text-xs font-semibold uppercase tracking-wide text-rose-400 inline-flex items-center gap-1"><Crown size={13} /> Admin · all users</span><div className="h-px flex-1 bg-stone-200" /></div>
+                  <AdminPanel />
+                </div>
+              )}
 
               {/* daily quests */}
               <div>
