@@ -2623,6 +2623,27 @@ function Glossary() {
   );
 }
 
+// Global search across every card (all subjects), modules, and glossary terms.
+// Token-rank scoring: exact substring boosts, per-word matches add up.
+function searchEverything(allCards, query) {
+  const q = query.toLowerCase().trim();
+  if (!q) return { cards: [], glossary: [] };
+  const words = q.split(/\s+/).filter(Boolean);
+  const score = (text) => {
+    const t = (text || "").toLowerCase(); let s = 0;
+    if (t.includes(q)) s += 10;
+    words.forEach((w) => { if (t.includes(w)) s += 2; });
+    return s;
+  };
+  const cards = allCards
+    .map((c) => ({ c, s: score(c.front + " " + c.back + " " + c.deck + " " + ((SUBJECTS[c.subject] || {}).label || "")) }))
+    .filter((x) => x.s > 0).sort((a, b) => b.s - a.s).slice(0, 40);
+  const glossary = GLOSSARY
+    .map(([t, d]) => ({ t, d, s: score(t + " " + d) }))
+    .filter((x) => x.s > 0).sort((a, b) => b.s - a.s).slice(0, 12);
+  return { cards, glossary };
+}
+
 /* ═══════════════════════════ DSA VISUALIZERS ═══════════════════════════ */
 
 const VIZ_COL = {
@@ -3172,6 +3193,7 @@ export default function App() {
   const [dark, setDark] = useState(false);
   const [onboarded, setOnboarded] = useState(isOnboarded);
   const [installPrompt, setInstallPrompt] = useState(null); // captured beforeinstallprompt event
+  const [search, setSearch] = useState(""); // global study-tab search
 
   // Inject CSS once into <head>
   useEffect(() => {
@@ -3605,6 +3627,52 @@ export default function App() {
               )}
             </div>
 
+            {/* global search — everything, everywhere */}
+            <div className="relative">
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-300" />
+              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search everything — cards, modules, glossary…"
+                className="w-full rounded-xl border border-stone-200 bg-white pl-9 pr-9 py-2.5 text-sm focus:outline-none focus:border-teal-400" />
+              {search && <button onClick={() => setSearch("")} className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-300 hover:text-stone-500"><X size={15} /></button>}
+            </div>
+
+            {search.trim() ? (() => {
+              const res = searchEverything(data.cards, search);
+              const jump = (c) => { commit((d) => ({ ...d, subject: c.subject || "german" })); setSearch(""); setSubview("cards:" + c.deck); };
+              return (
+                <div className="space-y-3">
+                  {res.glossary.length > 0 && (
+                    <div>
+                      <div className="text-xs font-semibold uppercase tracking-wide text-stone-400 mb-1.5">Glossary</div>
+                      <div className="space-y-1.5">
+                        {res.glossary.map(({ t, d }) => (
+                          <div key={t} className="rounded-xl border border-stone-200 bg-white px-3 py-2">
+                            <div className="text-sm font-semibold text-stone-800">{t}</div>
+                            <div className="text-xs text-stone-500 leading-relaxed">{d}</div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  <div>
+                    <div className="text-xs font-semibold uppercase tracking-wide text-stone-400 mb-1.5">{res.cards.length} card{res.cards.length !== 1 ? "s" : ""}</div>
+                    <div className="space-y-1.5 max-h-[55vh] overflow-auto pr-1">
+                      {res.cards.map(({ c }) => (
+                        <button key={c.id} onClick={() => jump(c)} className="w-full text-left rounded-xl border border-stone-200 bg-white px-3 py-2 hover:border-teal-300 hover:shadow-sm transition-all">
+                          <div className="flex items-center gap-2 mb-0.5">
+                            <span className="text-[10px] font-semibold uppercase tracking-wide text-teal-600">{(SUBJECTS[c.subject] || {}).label || c.subject}</span>
+                            <span className="text-[10px] text-stone-300">{c.deck}</span>
+                          </div>
+                          <div className="text-sm font-medium text-stone-800 break-words">{c.front}</div>
+                          <div className="text-xs text-stone-400 break-words line-clamp-2">{c.back}</div>
+                        </button>
+                      ))}
+                      {res.cards.length === 0 && res.glossary.length === 0 && <div className="text-center text-sm text-stone-400 py-6">Nothing matches "{search}".</div>}
+                    </div>
+                  </div>
+                </div>
+              );
+            })() : (
+            <>
             {/* stats + CTA */}
             <div className="rounded-2xl border border-stone-200 bg-white p-5">
               <div className="grid grid-cols-3 gap-3 text-center mb-5">
@@ -3662,6 +3730,8 @@ export default function App() {
               <div className="flex items-center gap-2 text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2">
                 <AlertCircle size={13} /> Session only — storage unavailable in this environment
               </div>
+            )}
+            </>
             )}
           </div>
         )}
