@@ -6,7 +6,7 @@ import {
   RotateCcw, Pencil, ClipboardPaste, Loader2, AlertCircle, BookOpen,
   Shuffle, Sparkles, Search, Trash2, RefreshCw, ListChecks, Layers, Moon, Sun,
   Lightbulb, Send, Cpu, Atom, ChevronDown, Wand2, MessageCircle, Code,
-  Download, Upload, Database,
+  Download, Upload, Database, HelpCircle,
 } from "lucide-react";
 
 /* ═══════════════════════════ DATA ═══════════════════════════ */
@@ -2578,13 +2578,60 @@ function isOnboarded() { try { return !!window.localStorage.getItem(ONBOARDED_KE
 function markOnboarded() { try { window.localStorage.setItem(ONBOARDED_KEY, "1"); } catch {} }
 
 // First-run welcome: brief intro + optional Groq key & model.
+const ACCENTS = {
+  sky:     "bg-sky-50 text-sky-700",
+  teal:    "bg-teal-50 text-teal-700",
+  orange:  "bg-orange-50 text-orange-700",
+  emerald: "bg-emerald-50 text-emerald-700",
+  rose:    "bg-rose-50 text-rose-700",
+};
+
 const HOW_TO_STEPS = [
-  { icon: ArrowLeftRight, title: "Pick a subject", text: "Switch between German and React anytime with the toggle at the top." },
-  { icon: Brain, title: "Study what's due", text: "On Study, flip each card, then rate how well you knew it — Again (now), Hard (10m), Good (1h), Easy (1d). Hard cards come back sooner. Misclick? Hit Undo." },
-  { icon: Target, title: "Practice & quiz", text: "Practice has quizzes, Timed Sprints (great before a test), and every flashcard module. Open a module to flip it, see the Overview, or 'Study this module'." },
-  { icon: Plus, title: "Add your own cards", text: "In Manage, paste/type cards or let AI generate and auto-sort them into modules. Back up your progress there too." },
-  { icon: MessageCircle, title: "Ask the AI tutor", text: "Tap 'Chat about this' on any card or quiz answer, or use the Tutor tab — it can even add cards, make quizzes, and start study for you." },
+  { icon: ArrowLeftRight, accent: "sky",     title: "Pick a subject", text: "Switch between German and React anytime with the toggle at the top." },
+  { icon: Brain,          accent: "teal",    title: "Study what's due", text: "On Study, flip each card, then rate how well you knew it — Again (now), Hard (10m), Good (1h), Easy (1d). Hard cards come back sooner. Misclick? Hit Undo." },
+  { icon: Target,         accent: "orange",  title: "Practice & quiz", text: "Practice has quizzes, Timed Sprints (great before a test), and every flashcard module. Open a module to flip it, see the Overview, or 'Study this module'." },
+  { icon: Plus,           accent: "emerald", title: "Add your own cards", text: "In Manage, paste/type cards or let AI generate and auto-sort them into modules. Back up your progress there too." },
+  { icon: MessageCircle,  accent: "rose",    title: "Ask the AI tutor", text: "Tap 'Chat about this' on any card or quiz answer, or use the Tutor tab — it can even add cards, make quizzes, and start study for you." },
 ];
+
+// Friendly study illustration (inline SVG — no assets needed).
+function StudyHeroArt({ className = "" }) {
+  return (
+    <svg viewBox="0 0 220 130" className={className} role="img" aria-label="Flashcards illustration">
+      <rect x="34" y="34" width="96" height="68" rx="12" fill="#ccfbf1" transform="rotate(-7 82 68)" />
+      <rect x="60" y="30" width="100" height="70" rx="12" fill="#ffffff" stroke="#0d9488" strokeWidth="2.5" />
+      <text x="110" y="60" fontSize="22" textAnchor="middle" fill="#0f766e" fontFamily="Georgia, serif" fontStyle="italic">Hallo</text>
+      <line x1="80" y1="72" x2="140" y2="72" stroke="#e7e5e4" strokeWidth="2" />
+      <text x="110" y="88" fontSize="12" textAnchor="middle" fill="#78716c">hello</text>
+      <g fill="#38bdf8">
+        <path d="M178 30 l3.5 8 8 3.5 -8 3.5 -3.5 8 -3.5 -8 -8 -3.5 8 -3.5z" />
+        <path d="M196 60 l2 4.5 4.5 2 -4.5 2 -2 4.5 -2 -4.5 -4.5 -2 4.5 -2z" />
+      </g>
+      <circle cx="54" cy="98" r="14" fill="#0d9488" />
+      <path d="M47 98 l5 5 9 -10" stroke="#ffffff" strokeWidth="3" fill="none" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// Reusable illustrated how-to guide (onboarding + in-app Help).
+function HowToGuide() {
+  return (
+    <div className="space-y-2.5">
+      {HOW_TO_STEPS.map((s, i) => {
+        const Icon = s.icon;
+        return (
+          <div key={i} className="flex gap-3 rounded-xl bg-stone-50 border border-stone-200 p-3">
+            <div className={`shrink-0 w-9 h-9 rounded-xl flex items-center justify-center ${ACCENTS[s.accent]}`}><Icon size={17} /></div>
+            <div className="min-w-0">
+              <div className="text-sm font-semibold text-stone-800">{i + 1}. {s.title}</div>
+              <div className="text-xs text-stone-500 leading-relaxed mt-0.5">{s.text}</div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
 
 function Onboarding({ onDone }) {
   const [step, setStep]   = useState(0);
@@ -2601,24 +2648,12 @@ function Onboarding({ onDone }) {
 
         {step === 0 ? (
           <>
+            <StudyHeroArt className="w-44 h-auto mx-auto" />
             <div className="text-center">
               <h1 className="text-2xl font-bold tracking-tight">Welcome 👋</h1>
               <p className="text-sm text-stone-500 mt-1">A spaced-repetition trainer for <span className="font-medium text-stone-700">German</span> &amp; <span className="font-medium text-stone-700">React</span>. Here's how to study:</p>
             </div>
-            <div className="space-y-2.5">
-              {HOW_TO_STEPS.map((s, i) => {
-                const Icon = s.icon;
-                return (
-                  <div key={i} className="flex gap-3 rounded-xl bg-stone-50 border border-stone-200 p-3">
-                    <div className="shrink-0 w-8 h-8 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center"><Icon size={16} /></div>
-                    <div className="min-w-0">
-                      <div className="text-sm font-semibold text-stone-800">{i + 1}. {s.title}</div>
-                      <div className="text-xs text-stone-500 leading-relaxed mt-0.5">{s.text}</div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+            <HowToGuide />
             <button onClick={() => setStep(1)} className="w-full rounded-xl bg-teal-600 text-white py-3 font-semibold hover:bg-teal-700 transition-colors flex items-center justify-center gap-2">
               Next <ChevronRight size={17} />
             </button>
@@ -2982,6 +3017,25 @@ export default function App() {
         />
       ) : <div className="text-sm text-stone-400">This module is empty.</div>;
     }
+    else if (subview === "help") {
+      title = "How to use the app";
+      content = (
+        <div className="space-y-4">
+          <StudyHeroArt className="w-48 h-auto mx-auto" />
+          <HowToGuide />
+          <div className="rounded-xl bg-stone-50 border border-stone-200 p-3">
+            <div className="text-xs font-semibold uppercase tracking-wide text-stone-400 mb-2">Keyboard shortcuts (study)</div>
+            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-stone-500">
+              <div><kbd className="rounded border border-stone-300 bg-white px-1">Space</kbd> reveal answer</div>
+              <div><kbd className="rounded border border-stone-300 bg-white px-1">1–4</kbd> rate Again/Hard/Good/Easy</div>
+              <div><kbd className="rounded border border-stone-300 bg-white px-1">U</kbd> undo last rating</div>
+              <div><kbd className="rounded border border-stone-300 bg-white px-1">Esc</kbd> / Back to exit</div>
+            </div>
+          </div>
+          <p className="text-xs text-stone-400">Tip: AI features (explanations, quizzes, tutor, auto-categorize) need a free Groq key — add it in Manage → AI settings.</p>
+        </div>
+      );
+    }
     else if (subview === "agentquiz") { title = "AI Quiz"; content = agentQuiz && agentQuiz.length
       ? <Exam make={() => agentQuiz} subjectLabel={subjMeta.label} onAddMissed={addMissed} />
       : <div className="text-sm text-stone-400">No quiz to show.</div>; }
@@ -3036,6 +3090,13 @@ export default function App() {
     <div className="min-h-screen bg-stone-100 text-stone-800 pb-20">
       <div className="mx-auto max-w-xl px-4 py-6">
         <DarkToggle dark={dark} onToggle={toggleDark} />
+        <button onClick={() => setSubview("help")} aria-label="How to use the app" title="How to use the app"
+          style={{ position: "fixed", top: 14, right: 58, zIndex: 9999, width: 36, height: 36, borderRadius: "50%",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            background: dark ? "#292524" : "#ffffff", border: "1px solid " + (dark ? "#57534e" : "#e7e5e4"),
+            color: dark ? "#e2e8f0" : "#57534e", cursor: "pointer", boxShadow: "0 1px 4px rgba(0,0,0,.12)" }}>
+          <HelpCircle size={18} />
+        </button>
 
         {/* subject switcher */}
         <div className="mb-5 inline-flex rounded-2xl border border-stone-200 bg-white p-1">
