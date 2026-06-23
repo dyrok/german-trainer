@@ -7,6 +7,7 @@ import {
   Shuffle, Sparkles, Search, Trash2, RefreshCw, ListChecks, Layers, Moon, Sun,
   Lightbulb, Send, Cpu, Atom, ChevronDown, Wand2, MessageCircle, Code,
   Download, Upload, Database, HelpCircle, Binary, Play, Pause, SkipForward, BookText, GitBranch,
+  Network, LineChart,
 } from "lucide-react";
 
 /* ═══════════════════════════ DATA ═══════════════════════════ */
@@ -2987,6 +2988,87 @@ function StackQueueViz() {
   );
 }
 
+// ── Linked list ──
+function LinkedListViz() {
+  const [nodes, setNodes] = useState([{ id: 1, v: 10 }, { id: 2, v: 25 }, { id: 3, v: 40 }]);
+  const nextId = useRef(4);
+  const rand = () => Math.floor(Math.random() * 90) + 10;
+  const mk = () => ({ id: nextId.current++, v: rand() });
+  return (
+    <div className="space-y-3">
+      <div className="rounded-2xl border border-stone-200 bg-white p-4 overflow-x-auto min-h-[120px] flex items-center">
+        <div className="flex items-center gap-1">
+          {nodes.length === 0 && <span className="text-sm text-stone-400">empty list (head → null)</span>}
+          {nodes.map((nd, idx) => (
+            <div key={nd.id} className="flex items-center gap-1">
+              <div className="relative flex flex-col items-center">
+                {idx === 0 && <span className="absolute -top-5 text-[10px] font-semibold text-teal-600">head</span>}
+                <div className="flex items-stretch rounded-lg border border-teal-300 overflow-hidden transition-all">
+                  <div className="px-3 py-2 font-mono text-sm text-stone-800 bg-teal-50">{nd.v}</div>
+                  <div className="px-2 py-2 flex items-center bg-white border-l border-teal-200 text-teal-500"><ArrowRightShort /></div>
+                </div>
+              </div>
+              {idx < nodes.length - 1 && <div className="w-4 h-px bg-stone-300" />}
+            </div>
+          ))}
+          {nodes.length > 0 && <span className="ml-2 text-xs font-mono text-stone-400">→ null</span>}
+        </div>
+      </div>
+      <div className="flex flex-wrap gap-2">
+        <Btn kind="primary" onClick={() => setNodes((ns) => [mk(), ...ns])}><Plus size={14} /> Insert head</Btn>
+        <Btn onClick={() => setNodes((ns) => [...ns, mk()])}><Plus size={14} /> Insert tail</Btn>
+        <Btn onClick={() => setNodes((ns) => ns.slice(1))} disabled={!nodes.length}>Delete head</Btn>
+        <Btn onClick={() => setNodes((ns) => ns.slice(0, -1))} disabled={!nodes.length}>Delete tail</Btn>
+      </div>
+      <p className="text-xs text-stone-400">Each node stores a value and a pointer to the next. Insert/delete at the head is O(1) — just relink pointers, no shifting like an array.</p>
+    </div>
+  );
+}
+function ArrowRightShort() { return <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14M13 6l6 6-6 6" /></svg>; }
+
+// ── Big-O growth chart (interactive) ──
+const BIGO_CLASSES = [
+  { k: "O(1)", f: () => 1, col: "#10b981" },
+  { k: "O(log n)", f: (n) => Math.log2(n), col: "#0ea5e9" },
+  { k: "O(n)", f: (n) => n, col: "#14b8a6" },
+  { k: "O(n log n)", f: (n) => n * Math.log2(n), col: "#f59e0b" },
+  { k: "O(n²)", f: (n) => n * n, col: "#f43f5e" },
+];
+function ComplexityViz() {
+  const [n, setN] = useState(16);
+  const MAXX = 32, W = 320, H = 200, pad = 8;
+  const maxY = Math.log2(MAXX * MAXX + 1); // log-scale by the largest curve (n²)
+  const sx = (x) => pad + (x / MAXX) * (W - 2 * pad);
+  const sy = (val) => H - pad - (Math.log2(val + 1) / maxY) * (H - 2 * pad);
+  const path = (f) => { let d = ""; for (let x = 1; x <= MAXX; x++) d += (x === 1 ? "M" : "L") + sx(x).toFixed(1) + " " + sy(f(x)).toFixed(1) + " "; return d; };
+  return (
+    <div className="space-y-3">
+      <div className="rounded-2xl border border-stone-200 bg-white p-3">
+        <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ maxHeight: 220 }}>
+          <line x1={sx(n)} y1={pad} x2={sx(n)} y2={H - pad} stroke="#e7e5e4" strokeWidth="1.5" strokeDasharray="4 3" />
+          {BIGO_CLASSES.map((c) => <path key={c.k} d={path(c.f)} fill="none" stroke={c.col} strokeWidth="2.5" />)}
+          {BIGO_CLASSES.map((c) => <circle key={c.k} cx={sx(n)} cy={sy(c.f(n))} r="3.5" fill={c.col} />)}
+        </svg>
+      </div>
+      <div>
+        <div className="flex items-center justify-between text-sm text-stone-600 mb-1">
+          <span>Input size n</span><span className="font-mono font-bold text-teal-700">{n}</span>
+        </div>
+        <input type="range" min="2" max={MAXX} value={n} onChange={(e) => setN(+e.target.value)} className="w-full accent-teal-600" />
+      </div>
+      <div className="rounded-xl bg-stone-50 border border-stone-200 p-3 space-y-1">
+        {BIGO_CLASSES.map((c) => (
+          <div key={c.k} className="flex items-center justify-between text-xs">
+            <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded" style={{ background: c.col }} /> {c.k}</span>
+            <span className="font-mono text-stone-600">≈ {Math.max(1, Math.round(c.f(n)))} ops</span>
+          </div>
+        ))}
+      </div>
+      <p className="text-xs text-stone-400">Drag n and watch how each complexity class grows. O(n²) explodes; O(log n) barely moves.</p>
+    </div>
+  );
+}
+
 /* ═══════════════════════════ APP ═══════════════════════════ */
 const DARK_CSS = [
   ".dark { color-scheme: dark; }",
@@ -3525,6 +3607,8 @@ export default function App() {
     else if (subview === "viz:search")     { title = "Binary Search"; content = <SearchViz />; }
     else if (subview === "viz:bst")        { title = "BST Explorer"; content = <BSTViz />; }
     else if (subview === "viz:stackqueue") { title = "Stack & Queue"; content = <StackQueueViz />; }
+    else if (subview === "viz:linkedlist") { title = "Linked List"; content = <LinkedListViz />; }
+    else if (subview === "viz:complexity") { title = "Big-O Growth"; content = <ComplexityViz />; }
     else if (subview === "aiquiz")    { title = "AI Quiz Generator"; content = <AIQuizMaker subjectLabel={subjMeta.label} onAddMissed={addMissed} />; }
     else if (subview === "timed")     { title = "Timed Sprint"; content = <TimedQuiz subject={subject} subjectLabel={subjMeta.label} onAddMissed={addMissed} />; }
     else if (subview.startsWith("cards:")) {
@@ -3790,6 +3874,8 @@ export default function App() {
                 <Tile label="Binary Search" sub="watch the range shrink" icon={Target} onClick={() => setSubview("viz:search")} />
                 <Tile label="BST Explorer" sub="insert & traverse" icon={GitBranch} onClick={() => setSubview("viz:bst")} />
                 <Tile label="Stack & Queue" sub="LIFO vs FIFO" icon={Layers} onClick={() => setSubview("viz:stackqueue")} />
+                <Tile label="Linked List" sub="insert & relink" icon={Network} onClick={() => setSubview("viz:linkedlist")} />
+                <Tile label="Big-O Chart" sub="growth rates, live" icon={LineChart} onClick={() => setSubview("viz:complexity")} />
               </div>
             </div>
             <div>
