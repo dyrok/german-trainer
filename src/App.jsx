@@ -6,7 +6,7 @@ import {
   RotateCcw, Pencil, ClipboardPaste, Loader2, AlertCircle, BookOpen,
   Shuffle, Sparkles, Search, Trash2, RefreshCw, ListChecks, Layers, Moon, Sun,
   Lightbulb, Send, Cpu, Atom, ChevronDown, Wand2, MessageCircle, Code,
-  Download, Upload, Database, HelpCircle,
+  Download, Upload, Database, HelpCircle, Binary, Play, Pause, SkipForward, BookText, GitBranch,
 } from "lucide-react";
 
 /* ═══════════════════════════ DATA ═══════════════════════════ */
@@ -374,6 +374,107 @@ const REACT_PROF_CARDS = [
   ["Components", "What is a React Fragment and why use it?", "<>...</> (or <React.Fragment>) groups multiple children without adding an extra DOM node — return several elements without a wrapper div."],
 ];
 
+/* ═══════════════════════════ DSA SUBJECT ═══════════════════════════ */
+// Professor's MCQ bank (deduplicated). { q, o:[4 options], c: correct letter }
+const DSA_QUIZ = [
+  { q: "What type of algorithmic strategy does Merge Sort use?", o: ["Divide and Conquer", "Dynamic Programming", "Brute Force", "Greedy Approach"], c: "A" },
+  { q: "What is the worst-case time complexity of Bubble Sort?", o: ["O(n)", "O(n^2)", "O(1)", "O(n log n)"], c: "B" },
+  { q: "Which sorting algorithm is generally stable and guarantees O(n log n) time complexity in all cases?", o: ["Quick Sort", "Bubble Sort", "Selection Sort", "Merge Sort"], c: "D" },
+  { q: "If an In-order traversal of a BST reads [3, 5, 7, 10, 12], what is definitely true about node 3?", o: ["It is at the bottom-right of the layout", "It is the smallest element in the BST", "It is the root of the tree", "It has the most child references"], c: "B" },
+  { q: "What happens during a single complete pass of Bubble Sort over an unsorted array?", o: ["The array is split into two equal halves", "The largest remaining element 'bubbles up' to its correct final position at the end", "The smallest element is placed at index 0", "Elements are sorted using a temporary stack"], c: "B" },
+  { q: "How does Insertion Sort build the final sorted array?", o: ["By picking a pivot and partitioning around it", "By swapping adjacent elements only", "One item at a time, inserting each element into its proper place", "By splitting the array into halves and merging"], c: "C" },
+  { q: "What is the best-case time complexity of Insertion Sort when the input is already sorted?", o: ["O(n)", "O(1)", "O(n log n)", "O(n^2)"], c: "A" },
+  { q: "In a full binary tree where every non-leaf node has exactly 2 children, how are leaf nodes distributed?", o: ["They reside at the lowest levels of the hierarchy", "They cannot have siblings", "They are placed adjacent to the root", "They are limited to the left subtree"], c: "A" },
+  { q: "What do we call a node in a tree that has no children?", o: ["Internal node", "Leaf node", "Root node", "Sibling node"], c: "B" },
+  { q: "In a valid Binary Search Tree, where is the node with the maximum value?", o: ["The shallowest leaf", "The leftmost node", "The root node", "The rightmost node"], c: "D" },
+  { q: "In Selection Sort, how many total swaps occur in the worst case for an array of size n?", o: ["O(n)", "O(n^2)", "O(1)", "O(n log n)"], c: "A" },
+  { q: "Which sorting algorithm is highly efficient for small datasets or nearly-sorted arrays?", o: ["Insertion Sort", "Merge Sort", "Heap Sort", "Selection Sort"], c: "A" },
+  { q: "What is the space complexity of an In-order traversal on a balanced tree of n nodes (recursion stack)?", o: ["O(1)", "O(log n)", "O(n^2)", "O(n)"], c: "B" },
+  { q: "Performing an In-order traversal on a valid BST produces output in what order?", o: ["Random order", "Sorted ascending order", "Sorted descending order", "The original insertion order"], c: "B" },
+  { q: "A BST contains keys [15, 10, 20, 8, 12]. Where is 12 placed relative to 10?", o: ["As a sibling of 20", "As the right child of 10", "As the left child of 10", "As the parent of 15"], c: "B" },
+  { q: "Pre-order, post-order, and in-order traversals are all categories of what generic strategy?", o: ["Divide and conquer", "Breadth First Search (BFS)", "Depth First Search (DFS)", "Binary searching"], c: "C" },
+  { q: "What is the main space disadvantage of standard Merge Sort vs Bubble/Insertion Sort?", o: ["It modifies the input directly", "It takes O(n^2) auxiliary space", "It requires O(n) extra auxiliary memory for merging", "It runs out of stack from infinite loops"], c: "C" },
+  { q: "What is the maximum number of children a node can have in a Binary Tree?", o: ["2", "Unlimited", "1", "3"], c: "A" },
+  { q: "Why do we track 'visited' nodes during a DFS traversal on a general graph?", o: ["To prevent infinite loops caused by cycles", "To sort values automatically", "To compute tree height instantly", "To clear memory after visiting"], c: "A" },
+  { q: "What is the definition of the height of a tree?", o: ["The number of direct children of the root", "The maximum value stored in the leaves", "The number of edges on the longest path from root to a leaf", "The total count of all nodes"], c: "C" },
+  { q: "In an In-order traversal, when is the current node processed (printed)?", o: ["After fully exploring the left subtree", "Before exploring the left subtree", "After fully exploring the right subtree", "Only when recursion returns to the root"], c: "A" },
+  { q: "Which sorting algorithm repeatedly finds the minimum from the unsorted part and puts it at the beginning?", o: ["Merge Sort", "Selection Sort", "Bubble Sort", "Insertion Sort"], c: "B" },
+  { q: "Which node serves as the top origin point of a tree hierarchy?", o: ["Leaf node", "Ancestor node", "Parent node", "Root node"], c: "D" },
+  { q: "What strategy best describes Depth First Search (DFS)?", o: ["Visits nodes in random order", "Visits leaves before the root", "Goes as deep as possible along each branch before backtracking", "Visits nodes level by level"], c: "C" },
+  { q: "Which of these is a common application of Depth First Search (DFS)?", o: ["Caching queues for servers", "Shortest path in an unweighted grid", "Level-order printing of a chart", "Detecting cycles in a graph"], c: "D" },
+  { q: "Given a binary tree with root 'A', left child 'B', right child 'C', what is the In-order traversal?", o: ["B → C → A", "A → B → C", "B → A → C", "C → B → A"], c: "C" },
+  { q: "What is the correct order of steps in an In-order traversal?", o: ["Traverse left, visit root, traverse right", "Visit root, traverse right, traverse left", "Visit root, traverse left, traverse right", "Traverse left, traverse right, visit root"], c: "A" },
+  { q: "Which binary tree traversal does NOT use a Depth First (DFS) approach?", o: ["Post-order", "Pre-order", "In-order", "Level-order"], c: "D" },
+  { q: "Which data structure is used to implement Depth First Search (DFS) iteratively?", o: ["Linked List", "Stack", "Queue", "Hash Table"], c: "B" },
+  { q: "In a BST, what must be true for every node's left subtree?", o: ["All values are less than the node's value", "It has the same height as the right subtree", "All values are greater than the node's value", "It must be empty"], c: "A" },
+  { q: "What is the ideal average-case time complexity for searching a key in a balanced BST?", o: ["O(log n)", "O(n^2)", "O(1)", "O(n)"], c: "A" },
+];
+
+// DSA flashcards by module (from the professor's notes + standard DSA). [deck, front, back]
+const DSA_MODULE_CARDS = [
+  ["Time Complexity", "What is time complexity?", "A measure of how an algorithm's running time grows as the input size n grows, written with Big-O notation (worst case)."],
+  ["Time Complexity", "What does Big-O notation describe?", "The upper bound / worst-case growth rate of an algorithm, ignoring constants and lower-order terms (e.g. O(n), O(n^2), O(log n))."],
+  ["Time Complexity", "Order these from fastest to slowest growth: O(n²), O(1), O(n log n), O(log n), O(n).", "O(1) < O(log n) < O(n) < O(n log n) < O(n²)."],
+  ["Time Complexity", "Why ignore constants in Big-O (e.g. O(2n) → O(n))?", "Big-O describes growth as n → ∞; constant factors don't change the growth rate, so they're dropped."],
+  ["Space Complexity", "What is space complexity?", "A measure of the extra (auxiliary) memory an algorithm needs as the input grows, also expressed in Big-O."],
+  ["Space Complexity", "What is the space complexity of Merge Sort?", "O(n) — it needs an auxiliary array to merge the halves."],
+  ["Space Complexity", "What is auxiliary space vs total space?", "Auxiliary space is the extra memory beyond the input; total space includes the input itself."],
+  ["Space Complexity", "Why can recursion add space cost?", "Each recursive call adds a frame to the call stack; depth d uses O(d) stack space (e.g. O(log n) for a balanced tree)."],
+  ["Pseudocode", "What is pseudocode and why use it?", "A plain, language-agnostic outline of an algorithm's logic. It lets you think through the approach before writing real code."],
+  ["Pseudocode", "Why 'think first' before coding?", "Planning the steps/edge cases in pseudocode avoids bugs and rewrites — you solve the problem on paper, then translate to code."],
+  ["Strings", "What is a string in DSA?", "An ordered sequence of characters, typically stored like an array of chars; many problems involve searching, reversing, or comparing substrings."],
+  ["Strings", "Why are strings often immutable?", "In many languages (Java, JS, Python) strings can't be changed in place; operations create new strings, which affects time/space cost."],
+  ["Arrays", "What is an array?", "A contiguous block of memory storing elements of the same type, accessed by index in O(1) time."],
+  ["Arrays", "Why is array access O(1) but insertion O(n)?", "Index access is direct address math; inserting/deleting in the middle requires shifting subsequent elements."],
+  ["Sorting", "What is a stable sort?", "A sort that preserves the relative order of elements with equal keys (e.g. Merge Sort is stable; Quick/Selection are not)."],
+  ["Sorting", "How does Bubble Sort work?", "Repeatedly steps through the list swapping adjacent out-of-order elements; each pass 'bubbles' the largest remaining value to the end. O(n²)."],
+  ["Sorting", "How does Selection Sort work?", "Repeatedly finds the minimum of the unsorted part and places it at the front. O(n²) comparisons, O(n) swaps."],
+  ["Sorting", "How does Insertion Sort work?", "Builds the sorted array one element at a time, inserting each into its correct position among the already-sorted prefix. Great for nearly-sorted data."],
+  ["Sorting", "How does Merge Sort work?", "Divide and conquer: split the array in half, recursively sort each half, then merge the two sorted halves. O(n log n), stable, O(n) space."],
+  ["Linear Search", "How does linear search work and its complexity?", "Check each element one by one until the target is found or the list ends. O(n) time, works on unsorted data."],
+  ["Binary Search", "How does binary search work?", "On a SORTED array, repeatedly compare the target to the middle element and discard half each step. O(log n) time."],
+  ["Binary Search", "What is the key precondition for binary search?", "The array must be sorted; otherwise the 'discard half' logic is invalid."],
+  ["Stack", "What is a stack?", "A LIFO (Last In, First Out) structure. Main ops: push (add to top), pop (remove top), peek (read top) — all O(1)."],
+  ["Stack", "Give a use of a stack.", "Function call stack, undo history, expression evaluation, and iterative DFS."],
+  ["Queue", "What is a queue?", "A FIFO (First In, First Out) structure. Main ops: enqueue (add to back), dequeue (remove from front) — O(1)."],
+  ["Queue", "Give a use of a queue.", "Task scheduling, buffering, and breadth-first search (BFS)."],
+  ["Linked List", "What is a linked list?", "A linear structure of nodes where each node holds data and a pointer to the next node. O(1) insert/delete at known positions, O(n) search."],
+  ["Linked List", "Linked list vs array — key difference?", "Arrays are contiguous with O(1) indexed access; linked lists are scattered nodes with O(n) access but cheap insertion/deletion."],
+  ["Trees", "What is a binary tree?", "A hierarchical structure where each node has at most 2 children (left and right)."],
+  ["Trees", "What is a Binary Search Tree (BST)?", "A binary tree where every node's left subtree holds smaller values and right subtree holds larger values, enabling O(log n) search when balanced."],
+  ["Trees", "What are the three DFS traversals?", "Pre-order (root, left, right), In-order (left, root, right), and Post-order (left, right, root). In-order on a BST gives sorted output."],
+  ["Trees", "What is the height of a tree?", "The number of edges on the longest path from the root to a leaf."],
+  ["Trees", "BFS vs DFS on a tree?", "BFS (level-order) visits level by level using a queue; DFS goes deep along a branch before backtracking, using a stack/recursion."],
+];
+
+// Glossary: term → definition. Terms appearing in card text get linked to these.
+const GLOSSARY = [
+  ["Big-O", "Notation for the worst-case growth rate of an algorithm's time or space as input size n grows, ignoring constants."],
+  ["Time complexity", "How an algorithm's running time scales with input size n, expressed in Big-O."],
+  ["Space complexity", "How much extra (auxiliary) memory an algorithm needs as input size grows."],
+  ["Divide and Conquer", "A strategy that splits a problem into smaller subproblems, solves them recursively, and combines the results (e.g. Merge Sort)."],
+  ["Stable sort", "A sort that keeps the relative order of equal-keyed elements unchanged."],
+  ["Pivot", "An element chosen in Quick Sort to partition the array into smaller and larger parts."],
+  ["Array", "A contiguous, index-addressable collection of same-type elements with O(1) access."],
+  ["Stack", "A LIFO (Last In, First Out) structure with push/pop/peek operations."],
+  ["Queue", "A FIFO (First In, First Out) structure with enqueue/dequeue operations."],
+  ["Linked List", "A chain of nodes where each node points to the next; cheap insert/delete, O(n) access."],
+  ["Binary Tree", "A tree where each node has at most two children (left and right)."],
+  ["Binary Search Tree", "A binary tree where left descendants are smaller and right descendants are larger than each node."],
+  ["BST", "Binary Search Tree — left subtree < node < right subtree; in-order traversal yields sorted order."],
+  ["Leaf node", "A tree node with no children."],
+  ["Root node", "The single top node of a tree, with no parent."],
+  ["Height", "The number of edges on the longest path from the root to a leaf."],
+  ["DFS", "Depth First Search — explore as deep as possible along a branch before backtracking; uses a stack/recursion."],
+  ["BFS", "Breadth First Search — explore level by level; uses a queue."],
+  ["In-order", "DFS traversal visiting left subtree, then the node, then the right subtree; yields sorted order on a BST."],
+  ["Pre-order", "DFS traversal visiting the node, then left subtree, then right subtree."],
+  ["Post-order", "DFS traversal visiting left subtree, then right subtree, then the node."],
+  ["Binary Search", "Searching a sorted array by halving the search range each step; O(log n)."],
+  ["Linear Search", "Checking each element in turn until the target is found; O(n)."],
+  ["Pseudocode", "A plain, language-agnostic sketch of an algorithm's logic before writing real code."],
+];
+
 /* ═══════════════════════════ PURE HELPERS ═══════════════════════════ */
 
 function shuffle(arr) {
@@ -586,35 +687,45 @@ function seedReactCards() {
   return [...basics, ...modules, ...prof];
 }
 
-function seedAll() { return [...seedCards(), ...seedReactCards()]; }
+function seedDsaCards() {
+  const basics = DSA_QUIZ.map((item, i) =>
+    newCard(item.q, item.o[LETTER_IDX[item.c]], "DSA Basics", null, "d" + i, "dsa"));
+  const modules = DSA_MODULE_CARDS.map(([deck, q, a], i) =>
+    newCard(q, a, "DSA · " + deck, null, "dm" + i, "dsa"));
+  return [...basics, ...modules];
+}
+
+function seedAll() { return [...seedCards(), ...seedReactCards(), ...seedDsaCards()]; }
 
 function freshData() {
   return { v: 2, subject: "german", cards: seedAll(),
     settings: { newPerDay: 20 }, daily: { day: todayStr(), newDone: 0 }, streak: { count: 0, lastDay: null }, session: null };
 }
 
-// Upgrade older saved data: tag legacy cards german, and merge in any new React seed cards by id.
+// Upgrade older saved data: tag legacy cards german, and merge in any new seed cards by id.
 function migrate(d) {
   if (!d) return freshData();
   let cards = d.cards.map((c) => c.subject ? c : { ...c, subject: "german" });
   const have = new Set(cards.map((c) => c.id));
-  const missing = seedReactCards().filter((rc) => !have.has(rc.id));
+  const missing = [...seedReactCards(), ...seedDsaCards()].filter((rc) => !have.has(rc.id));
   if (missing.length) cards = [...cards, ...missing];
   return { ...d, v: 2, subject: d.subject || "german", cards, streak: d.streak || { count: 0, lastDay: null }, session: d.session || null };
 }
 
-// Build a randomized React quiz in Exam format (options shuffled each round)
-function makeReactQuiz(n = 15) {
-  return shuffle(REACT_QUIZ).slice(0, n).map((item) => {
-    const answer = item.o[LETTER_IDX[item.c]];
-    return { section: "React", prompt: item.q, options: shuffle(item.o), answer };
-  });
+// Build a randomized quiz in Exam format from a {q,o,c} bank (options shuffled each round)
+function makeBankQuiz(bank, section, n = 15) {
+  return shuffle(bank).slice(0, n).map((item) => ({
+    section, prompt: item.q, options: shuffle(item.o), answer: item.o[LETTER_IDX[item.c]],
+  }));
 }
+function makeReactQuiz(n = 15) { return makeBankQuiz(REACT_QUIZ, "React", n); }
+function makeDsaQuiz(n = 15)   { return makeBankQuiz(DSA_QUIZ, "DSA", n); }
 
 /* ─── Subject registry ─── */
 const SUBJECTS = {
   german: { id: "german", label: "German A1", sub: "Deutsch lernen", icon: Languages, accent: "teal" },
   react:  { id: "react",  label: "React",     sub: "Frontend basics", icon: Atom,     accent: "sky"  },
+  dsa:    { id: "dsa",     label: "DSA",       sub: "Data structures & algorithms", icon: Binary, accent: "orange" },
 };
 const SUBJECT_LIST = Object.values(SUBJECTS);
 
@@ -2151,7 +2262,7 @@ function TimedQuiz({ subject, subjectLabel = "this subject", onAddMissed }) {
       } catch (e) { msg = "AI unavailable (" + (e?.message || "error") + ") — using the built-in bank."; }
     }
     if (!questions.length) {
-      questions = subject === "react" ? makeReactQuiz(n) : buildTest().slice(0, n);
+      questions = subject === "react" ? makeReactQuiz(n) : subject === "dsa" ? makeDsaQuiz(n) : buildTest().slice(0, n);
       if (!msg) msg = loadGroqKey()
         ? "Using the built-in question bank."
         : "Built-in question bank. Add a Groq key in Manage → AI settings for AI-curated sprints.";
@@ -2462,6 +2573,357 @@ function Tutor({ subjectLabel = "this subject", actions }) {
 
       <AgentChat key={active.id} subjectLabel={subjectLabel} actions={actions} context={active.context}
         messages={active.messages} setMessages={setMessages} suggestions={suggestions} />
+    </div>
+  );
+}
+
+/* ═══════════════════════════ GLOSSARY ═══════════════════════════ */
+
+// Wrap known glossary terms in card/answer text with a subtle underline + tooltip.
+function GlossaryText({ text }) {
+  if (!text) return null;
+  // longest-first so multi-word terms match before sub-words
+  const terms = GLOSSARY.map((g) => g[0]).sort((a, b) => b.length - a.length);
+  const defOf = (t) => (GLOSSARY.find((g) => g[0].toLowerCase() === t.toLowerCase()) || [])[1];
+  const re = new RegExp("\\b(" + terms.map((t) => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|") + ")\\b", "gi");
+  const parts = [];
+  let last = 0, m, seen = new Set();
+  while ((m = re.exec(text))) {
+    const term = m[0];
+    if (seen.has(term.toLowerCase())) continue; // link each term once
+    seen.add(term.toLowerCase());
+    if (m.index > last) parts.push(text.slice(last, m.index));
+    parts.push(<abbr key={m.index} title={defOf(term)} className="underline decoration-dotted decoration-teal-400 cursor-help">{term}</abbr>);
+    last = m.index + term.length;
+  }
+  if (last < text.length) parts.push(text.slice(last));
+  return <>{parts}</>;
+}
+
+function Glossary() {
+  const [q, setQ] = useState("");
+  const shown = GLOSSARY.filter(([t, d]) => !q || (t + " " + d).toLowerCase().includes(q.toLowerCase()));
+  return (
+    <div className="space-y-3">
+      <div className="relative">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-300" />
+        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Search ${GLOSSARY.length} terms…`}
+          className="w-full rounded-xl border border-stone-200 px-9 py-2 text-sm focus:outline-none focus:border-teal-400" />
+      </div>
+      <div className="space-y-1.5">
+        {shown.map(([t, d]) => (
+          <div key={t} className="rounded-xl border border-stone-200 bg-white px-3 py-2">
+            <div className="text-sm font-semibold text-stone-800">{t}</div>
+            <div className="text-xs text-stone-500 leading-relaxed mt-0.5">{d}</div>
+          </div>
+        ))}
+        {shown.length === 0 && <div className="text-center text-sm text-stone-400 py-4">No terms match.</div>}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════ DSA VISUALIZERS ═══════════════════════════ */
+
+const VIZ_COL = {
+  base: "bg-stone-300 dark:bg-stone-600", compare: "bg-amber-400", swap: "bg-rose-400",
+  sorted: "bg-emerald-400", key: "bg-teal-500", place: "bg-teal-500",
+};
+
+function VizControls({ playing, onPlay, onStep, onReset, atEnd, info }) {
+  return (
+    <div className="flex items-center gap-2">
+      <button onClick={onPlay} disabled={atEnd}
+        className="inline-flex items-center gap-1.5 rounded-xl bg-teal-600 text-white px-3 py-2 text-sm font-semibold hover:bg-teal-700 disabled:opacity-40">
+        {playing ? <Pause size={15} /> : <Play size={15} />} {playing ? "Pause" : "Play"}
+      </button>
+      <button onClick={onStep} disabled={atEnd} className="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 px-3 py-2 text-sm text-stone-600 hover:bg-stone-50 disabled:opacity-40"><SkipForward size={15} /> Step</button>
+      <button onClick={onReset} className="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 px-3 py-2 text-sm text-stone-600 hover:bg-stone-50"><RotateCcw size={15} /> Reset</button>
+      {info != null && <span className="ml-auto text-xs text-stone-400">{info}</span>}
+    </div>
+  );
+}
+
+// Frame-based autoplay used by sorting & search labs.
+function useFrames(buildFrames, deps) {
+  const [frames, setFrames] = useState(buildFrames);
+  const [i, setI] = useState(0);
+  const [playing, setPlaying] = useState(false);
+  useEffect(() => { setFrames(buildFrames()); setI(0); setPlaying(false); }, deps);
+  useEffect(() => {
+    if (!playing) return;
+    if (i >= frames.length - 1) { setPlaying(false); return; }
+    const t = setTimeout(() => setI((x) => Math.min(frames.length - 1, x + 1)), 650);
+    return () => clearTimeout(t);
+  }, [playing, i, frames]);
+  const atEnd = i >= frames.length - 1;
+  return { frames, i, setI, playing, setPlaying, atEnd, reset: () => { setFrames(buildFrames()); setI(0); setPlaying(false); } };
+}
+
+function randArr(n = 8, max = 60) { return Array.from({ length: n }, () => 6 + Math.floor(Math.random() * max)); }
+
+// Token-based frames: each value keeps a stable id so bars can be tracked and
+// physically slid to their new positions across frames (like the canvas example).
+function genSortFrames(algo, src) {
+  let toks = src.map((v, i) => ({ v, id: "t" + i }));
+  const f = [], n = toks.length, sorted = new Set();
+  const snap = (marks) => f.push({ tokens: toks.map((t) => ({ ...t })), sorted: [...sorted], ...marks });
+  snap({ msg: "Start" });
+  if (algo === "bubble") {
+    for (let i = 0; i < n; i++) { for (let j = 0; j < n - 1 - i; j++) { snap({ compare: [j, j + 1], msg: `Compare ${toks[j].v} & ${toks[j + 1].v}` });
+      if (toks[j].v > toks[j + 1].v) { [toks[j], toks[j + 1]] = [toks[j + 1], toks[j]]; snap({ swap: [j, j + 1], msg: "Swap — slide them past each other" }); } } sorted.add(n - 1 - i); } sorted.add(0);
+  } else if (algo === "selection") {
+    for (let i = 0; i < n; i++) { let mi = i; for (let j = i + 1; j < n; j++) { snap({ compare: [mi, j], msg: "Scan for the minimum" }); if (toks[j].v < toks[mi].v) mi = j; }
+      if (mi !== i) { [toks[i], toks[mi]] = [toks[mi], toks[i]]; snap({ swap: [i, mi], msg: "Swap min into place" }); } sorted.add(i); }
+  } else if (algo === "insertion") {
+    sorted.add(0); for (let i = 1; i < n; i++) { let j = i; snap({ key: i, msg: `Insert ${toks[i].v}` });
+      while (j > 0 && toks[j - 1].v > toks[j].v) { snap({ compare: [j - 1, j] }); [toks[j - 1], toks[j]] = [toks[j], toks[j - 1]]; snap({ swap: [j - 1, j], msg: "Shift right" }); j--; }
+      for (let k = 0; k <= i; k++) sorted.add(k); }
+  } else if (algo === "merge") {
+    (function ms(lo, hi) { if (lo >= hi) return; const mid = (lo + hi) >> 1; ms(lo, mid); ms(mid + 1, hi);
+      const left = toks.slice(lo, mid + 1), right = toks.slice(mid + 1, hi + 1), merged = []; let i = 0, j = 0;
+      snap({ range: [lo, hi], msg: "Merge two sorted halves" });
+      while (i < left.length && j < right.length) { merged.push(left[i].v <= right[j].v ? left[i++] : right[j++]); }
+      while (i < left.length) merged.push(left[i++]);
+      while (j < right.length) merged.push(right[j++]);
+      for (let k = 0; k < merged.length; k++) toks[lo + k] = merged[k];
+      snap({ range: [lo, hi], place: merged.map((_, k) => lo + k), msg: "Slide into merged order" }); })(0, n - 1);
+    for (let k = 0; k < n; k++) sorted.add(k);
+  }
+  snap({ sorted: [...Array(n).keys()], msg: "Sorted!" });
+  return f;
+}
+
+const SORT_ALGOS = [["bubble", "Bubble"], ["selection", "Selection"], ["insertion", "Insertion"], ["merge", "Merge"]];
+const SORT_STEP = 42, SORT_BARW = 32, SORT_H = 200;
+
+function SortingViz() {
+  const [algo, setAlgo] = useState("bubble");
+  const [src, setSrc] = useState(() => randArr(8));
+  const { frames, i, setI, playing, setPlaying, atEnd } = useFrames(() => genSortFrames(algo, src), [algo, src]);
+  const f = frames[i] || { tokens: src.map((v, k) => ({ v, id: "t" + k })), sorted: [] };
+  const toks = f.tokens;
+  const n = toks.length;
+  const ids = (frames[0] ? frames[0].tokens : toks).map((t) => t.id);
+  const max = Math.max(...toks.map((t) => t.v), 1);
+  const idxOf = (id) => toks.findIndex((t) => t.id === id);
+  const colorOf = (idx) => {
+    if (f.sorted && f.sorted.includes(idx)) return "bg-emerald-400";
+    if (f.swap && f.swap.includes(idx)) return "bg-rose-400";
+    if (f.compare && f.compare.includes(idx)) return "bg-amber-400";
+    if (f.place && f.place.includes(idx)) return "bg-teal-500";
+    if (f.key === idx) return "bg-teal-500";
+    return "bg-stone-300";
+  };
+  return (
+    <div className="space-y-3">
+      <div className="inline-flex rounded-xl bg-stone-200 p-1 text-sm">
+        {SORT_ALGOS.map(([k, l]) => (
+          <button key={k} onClick={() => setAlgo(k)} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${algo === k ? "bg-white text-stone-800 shadow-sm" : "text-stone-500"}`}>{l}</button>
+        ))}
+      </div>
+      <div className="rounded-2xl border border-stone-200 bg-white p-4 overflow-x-auto">
+        <div className="relative mx-auto" style={{ width: n * SORT_STEP, height: SORT_H }}>
+          {ids.map((id) => {
+            const idx = idxOf(id);
+            const tok = toks[idx];
+            const dim = f.range && (idx < f.range[0] || idx > f.range[1]);
+            return (
+              <div key={id} className="absolute bottom-0 h-full flex flex-col justify-end items-center"
+                style={{ width: SORT_BARW, transform: `translateX(${idx * SORT_STEP}px)`, transition: "transform .35s cubic-bezier(.4,0,.2,1)" }}>
+                <div className={`w-full rounded-t-md transition-[height,background-color] duration-300 ${colorOf(idx)} ${dim ? "opacity-40" : ""}`}
+                  style={{ height: 18 + (tok.v / max) * (SORT_H - 46) }} />
+                <div className="mt-1 text-[10px] font-mono text-stone-500">{tok.v}</div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-2 text-center text-xs text-stone-500 h-4">{f.msg || ""}</div>
+      </div>
+      <VizControls playing={playing} atEnd={atEnd}
+        onPlay={() => setPlaying((p) => !p)} onStep={() => setI((x) => Math.min(frames.length - 1, x + 1))}
+        onReset={() => setSrc(randArr(8))} info={`Step ${i + 1}/${frames.length}`} />
+      <div className="rounded-xl bg-stone-50 border border-stone-200 p-3 text-xs text-stone-500 flex flex-wrap gap-x-4 gap-y-1">
+        <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-amber-400" /> comparing</span>
+        <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-rose-400" /> swapping</span>
+        <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-emerald-400" /> sorted</span>
+      </div>
+    </div>
+  );
+}
+
+function genSearchFrames(arr, target) {
+  const f = []; let lo = 0, hi = arr.length - 1;
+  f.push({ lo, hi, msg: `Search for ${target} in a sorted array` });
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    f.push({ lo, hi, mid, msg: `Check middle (index ${mid}) = ${arr[mid]}` });
+    if (arr[mid] === target) { f.push({ lo, hi, mid, found: mid, msg: `Found ${target}!` }); return f; }
+    if (arr[mid] < target) { lo = mid + 1; f.push({ lo, hi, mid, discardL: true, msg: `${arr[mid]} < ${target} → search right half` }); }
+    else { hi = mid - 1; f.push({ lo, hi, mid, discardR: true, msg: `${arr[mid]} > ${target} → search left half` }); }
+  }
+  f.push({ lo, hi, msg: `${target} not found` });
+  return f;
+}
+
+function SearchViz() {
+  const [data, setData] = useState(() => { const a = randArr(10, 40).sort((x, y) => x - y); return { arr: a, target: a[Math.floor(Math.random() * a.length)] }; });
+  const { frames, i, setI, playing, setPlaying, atEnd } = useFrames(() => genSearchFrames(data.arr, data.target), [data]);
+  const f = frames[i] || {};
+  return (
+    <div className="space-y-3">
+      <div className="text-sm text-stone-600">Target: <span className="font-mono font-bold text-teal-700">{data.target}</span></div>
+      <div className="rounded-2xl border border-stone-200 bg-white p-4">
+        <div className="flex items-end justify-center gap-1.5 flex-wrap">
+          {data.arr.map((v, idx) => {
+            const inRange = f.lo != null && idx >= f.lo && idx <= f.hi;
+            const isMid = f.mid === idx;
+            const isFound = f.found === idx;
+            let cls = "bg-stone-100 text-stone-400 border-stone-200";
+            if (inRange) cls = "bg-white text-stone-700 border-stone-300";
+            if (isMid) cls = "bg-amber-100 text-amber-800 border-amber-400";
+            if (isFound) cls = "bg-emerald-100 text-emerald-800 border-emerald-400";
+            return (
+              <div key={idx} className="flex flex-col items-center gap-1">
+                <div className={`w-9 h-9 rounded-lg border flex items-center justify-center text-sm font-mono font-semibold transition-colors ${cls}`}>{v}</div>
+                <div className="text-[9px] text-stone-300 font-mono">{idx}</div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-2 text-center text-xs text-stone-500 h-4">{f.msg || ""}</div>
+      </div>
+      <VizControls playing={playing} atEnd={atEnd}
+        onPlay={() => setPlaying((p) => !p)} onStep={() => setI((x) => Math.min(frames.length - 1, x + 1))}
+        onReset={() => { const a = randArr(10, 40).sort((x, y) => x - y); setData({ arr: a, target: a[Math.floor(Math.random() * a.length)] }); }}
+        info={`Step ${i + 1}/${frames.length}`} />
+    </div>
+  );
+}
+
+// ── BST explorer ──
+function bstInsert(root, key) {
+  if (!root) return { key, left: null, right: null };
+  if (key < root.key) root.left = bstInsert(root.left, key);
+  else if (key > root.key) root.right = bstInsert(root.right, key);
+  return root;
+}
+function bstTraverse(root, order) {
+  const out = [];
+  (function go(n) { if (!n) return;
+    if (order === "pre") out.push(n.key);
+    go(n.left);
+    if (order === "in") out.push(n.key);
+    go(n.right);
+    if (order === "post") out.push(n.key);
+  })(root);
+  return out;
+}
+function layoutBST(root) {
+  const nodes = []; const edges = []; let x = 0;
+  (function go(n, depth) { if (!n) return; go(n.left, depth + 1); const px = x++; n._x = px; n._y = depth;
+    nodes.push({ key: n.key, x: px, y: depth }); if (n.left) edges.push([px, n._depthLeft]); go(n.right, depth + 1); })(root, 0);
+  // recompute edges by linking parent/child via positions
+  edges.length = 0;
+  (function link(n) { if (!n) return; if (n.left) edges.push([n._x, n._y, n.left._x, n.left._y]); if (n.right) edges.push([n._x, n._y, n.right._x, n.right._y]); link(n.left); link(n.right); })(root);
+  return { nodes, edges, width: x };
+}
+
+function BSTViz() {
+  const [root, setRoot] = useState(() => { let r = null; [50, 30, 70, 20, 40, 60, 80].forEach((k) => { r = bstInsert(r, k); }); return r; });
+  const [input, setInput] = useState("");
+  const [highlight, setHighlight] = useState([]);
+  const [output, setOutput] = useState([]);
+  const insertKey = () => { const k = parseInt(input, 10); if (isNaN(k)) return; setRoot((r) => bstInsert(r ? { ...r } : null, k)); setInput(""); setHighlight([]); setOutput([]); };
+  const traverse = (order) => {
+    const seq = bstTraverse(root, order);
+    setOutput([]); setHighlight([]);
+    seq.forEach((key, idx) => setTimeout(() => { setHighlight([key]); setOutput((o) => [...o, key]); }, idx * 600));
+  };
+  const { nodes, edges, width } = layoutBST(root);
+  const W = Math.max(width, 1) * 46 + 20, levels = Math.max(...nodes.map((n) => n.y), 0) + 1, H = levels * 60 + 20;
+  const px = (x) => 20 + x * 46, py = (y) => 30 + y * 60;
+  return (
+    <div className="space-y-3">
+      <div className="flex gap-2">
+        <input value={input} onChange={(e) => setInput(e.target.value)} type="number" placeholder="value"
+          onKeyDown={(e) => { if (e.key === "Enter") insertKey(); }}
+          className="w-24 rounded-xl border border-stone-200 px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
+        <Btn kind="primary" onClick={insertKey}><Plus size={15} /> Insert</Btn>
+        <Btn onClick={() => { setRoot(null); setOutput([]); setHighlight([]); }}>Clear</Btn>
+      </div>
+      <div className="rounded-2xl border border-stone-200 bg-white p-2 overflow-auto">
+        {root ? (
+          <svg width="100%" viewBox={`0 0 ${W} ${H}`} style={{ minWidth: W, maxHeight: 300 }}>
+            {edges.map(([x1, y1, x2, y2], k) => <line key={k} x1={px(x1)} y1={py(y1)} x2={px(x2)} y2={py(y2)} stroke="#d6d3d1" strokeWidth="2" />)}
+            {nodes.map((n) => {
+              const on = highlight.includes(n.key);
+              return (
+                <g key={n.key}>
+                  <circle cx={px(n.x)} cy={py(n.y)} r="16" fill={on ? "#0d9488" : "#f0fdfa"} stroke={on ? "#0d9488" : "#5eead4"} strokeWidth="2" />
+                  <text x={px(n.x)} y={py(n.y) + 4} textAnchor="middle" fontSize="12" fontFamily="monospace" fontWeight="700" fill={on ? "#fff" : "#0f766e"}>{n.key}</text>
+                </g>
+              );
+            })}
+          </svg>
+        ) : <div className="text-center text-sm text-stone-400 py-8">Empty tree — insert a value.</div>}
+      </div>
+      <div className="flex flex-wrap gap-2">
+        {[["in", "In-order"], ["pre", "Pre-order"], ["post", "Post-order"]].map(([o, l]) => (
+          <Btn key={o} onClick={() => traverse(o)} disabled={!root}>{l}</Btn>
+        ))}
+      </div>
+      {output.length > 0 && (
+        <div className="rounded-xl bg-stone-50 border border-stone-200 p-3 text-sm font-mono text-teal-700">{output.join(" → ")}</div>
+      )}
+      <p className="text-xs text-stone-400">In-order traversal of a BST visits keys in sorted ascending order.</p>
+    </div>
+  );
+}
+
+// ── Stack & Queue ──
+function StackQueueViz() {
+  const [mode, setMode] = useState("stack");
+  const [items, setItems] = useState([7, 3, 9]);
+  const [n, setN] = useState(10);
+  const push = () => { setItems((s) => [...s, n]); setN(Math.floor(Math.random() * 90) + 10); };
+  const pop = () => setItems((s) => s.slice(0, -1));        // stack: remove top (end)
+  const dequeue = () => setItems((s) => s.slice(1));         // queue: remove front (start)
+  return (
+    <div className="space-y-3">
+      <div className="inline-flex rounded-xl bg-stone-200 p-1 text-sm">
+        {[["stack", "Stack (LIFO)"], ["queue", "Queue (FIFO)"]].map(([k, l]) => (
+          <button key={k} onClick={() => { setMode(k); setItems([7, 3, 9]); }} className={`px-3 py-1.5 rounded-lg font-medium transition-colors ${mode === k ? "bg-white text-stone-800 shadow-sm" : "text-stone-500"}`}>{l}</button>
+        ))}
+      </div>
+      <div className="rounded-2xl border border-stone-200 bg-white p-4 min-h-[180px] flex items-center justify-center">
+        {mode === "stack" ? (
+          <div className="flex flex-col-reverse items-center gap-1.5">
+            {items.length === 0 && <div className="text-sm text-stone-400">empty stack</div>}
+            {items.map((v, idx) => (
+              <div key={idx} className={`w-24 py-2 rounded-lg border text-center font-mono text-sm transition-all ${idx === items.length - 1 ? "bg-teal-50 border-teal-400 text-teal-800" : "bg-white border-stone-200 text-stone-600"}`}>
+                {v}{idx === items.length - 1 && <span className="ml-1 text-[10px] text-teal-500">← top</span>}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex items-center gap-1.5 flex-wrap justify-center">
+            {items.length === 0 && <div className="text-sm text-stone-400">empty queue</div>}
+            {items.map((v, idx) => (
+              <div key={idx} className={`px-3 py-3 rounded-lg border text-center font-mono text-sm ${idx === 0 ? "bg-amber-50 border-amber-400 text-amber-800" : idx === items.length - 1 ? "bg-teal-50 border-teal-400 text-teal-800" : "bg-white border-stone-200 text-stone-600"}`}>
+                {v}
+                {idx === 0 && <div className="text-[9px] text-amber-500">front</div>}
+                {idx === items.length - 1 && idx !== 0 && <div className="text-[9px] text-teal-500">rear</div>}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="flex gap-2">
+        <Btn kind="primary" onClick={push}><Plus size={15} /> {mode === "stack" ? "Push" : "Enqueue"} {n}</Btn>
+        <Btn onClick={mode === "stack" ? pop : dequeue} disabled={!items.length}>{mode === "stack" ? "Pop (top)" : "Dequeue (front)"}</Btn>
+      </div>
+      <p className="text-xs text-stone-400">{mode === "stack" ? "LIFO — the last item pushed is the first popped." : "FIFO — the first item enqueued is the first dequeued."}</p>
     </div>
   );
 }
@@ -2997,6 +3459,12 @@ export default function App() {
     else if (subview === "countries") { title = "Languages"; content = <Exam make={() => buildN(genCountry, 12)} subjectLabel={subjMeta.label} onAddMissed={addMissed} />; }
     else if (subview === "time")      { title = "Time";     content = <Exam make={() => buildN(genTime, 10)} subjectLabel={subjMeta.label} onAddMissed={addMissed} />; }
     else if (subview === "reactquiz") { title = "React Quiz"; content = <Exam make={() => makeReactQuiz(15)} subjectLabel="React" onAddMissed={addMissed} />; }
+    else if (subview === "dsaquiz")   { title = "DSA Quiz"; content = <Exam make={() => makeDsaQuiz(15)} subjectLabel="DSA" onAddMissed={addMissed} />; }
+    else if (subview === "glossary")  { title = "Glossary"; content = <Glossary />; }
+    else if (subview === "viz:sorting")    { title = "Sorting Lab"; content = <SortingViz />; }
+    else if (subview === "viz:search")     { title = "Binary Search"; content = <SearchViz />; }
+    else if (subview === "viz:bst")        { title = "BST Explorer"; content = <BSTViz />; }
+    else if (subview === "viz:stackqueue") { title = "Stack & Queue"; content = <StackQueueViz />; }
     else if (subview === "aiquiz")    { title = "AI Quiz Generator"; content = <AIQuizMaker subjectLabel={subjMeta.label} onAddMissed={addMissed} />; }
     else if (subview === "timed")     { title = "Timed Sprint"; content = <TimedQuiz subject={subject} subjectLabel={subjMeta.label} onAddMissed={addMissed} />; }
     else if (subview.startsWith("cards:")) {
@@ -3199,6 +3667,49 @@ export default function App() {
         )}
 
         {/* ─── PRACTICE TAB ─── */}
+        {tab === "practice" && subject === "dsa" && (
+          <div className="space-y-6">
+            <h1 className="text-2xl font-bold tracking-tight">
+              <span className="font-serif italic text-teal-700">Practice</span> · DSA
+            </h1>
+            <div>
+              <div className="flex items-center gap-2 mb-2.5">
+                <span className="text-xs font-semibold uppercase tracking-wide text-stone-400">Visualize &amp; play</span>
+                <div className="h-px flex-1 bg-stone-200" />
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                <Tile label="Sorting Lab" sub="animate 4 algorithms" icon={Binary} onClick={() => setSubview("viz:sorting")} />
+                <Tile label="Binary Search" sub="watch the range shrink" icon={Target} onClick={() => setSubview("viz:search")} />
+                <Tile label="BST Explorer" sub="insert & traverse" icon={GitBranch} onClick={() => setSubview("viz:bst")} />
+                <Tile label="Stack & Queue" sub="LIFO vs FIFO" icon={Layers} onClick={() => setSubview("viz:stackqueue")} />
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-2.5">
+                <span className="text-xs font-semibold uppercase tracking-wide text-stone-400">Quizzes</span>
+                <div className="h-px flex-1 bg-stone-200" />
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                <Tile label="DSA Quiz" sub={`${DSA_QUIZ.length} MCQs · shuffled`} icon={ListChecks} onClick={() => setSubview("dsaquiz")} />
+                <Tile label="Timed Sprint" sub="best quiz in your time" icon={Clock} onClick={() => setSubview("timed")} />
+                <Tile label="AI Quiz" sub="generate from a topic" icon={Wand2} onClick={() => setSubview("aiquiz")} />
+                <Tile label="Glossary" sub={`${GLOSSARY.length} key terms`} icon={BookText} onClick={() => setSubview("glossary")} />
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-2.5">
+                <span className="text-xs font-semibold uppercase tracking-wide text-stone-400">Flashcard modules</span>
+                <div className="h-px flex-1 bg-stone-200" />
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                {subjectDecks.map((d) => (
+                  <Tile key={d} label={d.replace(/^DSA · /, "")} sub={moduleSub(d)} icon={Layers} onClick={() => setSubview("cards:" + d)} />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {tab === "practice" && subject === "react" && (
           <div className="space-y-6">
             <h1 className="text-2xl font-bold tracking-tight">
