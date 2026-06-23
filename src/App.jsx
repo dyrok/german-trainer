@@ -447,6 +447,32 @@ const DSA_MODULE_CARDS = [
   ["Trees", "BFS vs DFS on a tree?", "BFS (level-order) visits level by level using a queue; DFS goes deep along a branch before backtracking, using a stack/recursion."],
 ];
 
+// DSA flashcards distilled from the professor's notes (Medium / GeeksforGeeks). [deck, front, back]
+const DSA_PROF_CARDS = [
+  ["Time Complexity", "Big-O in one line?", "A 'speed label' for an algorithm — how its performance changes as input size n grows."],
+  ["Time Complexity", "What does O(1) mean?", "Constant time — runtime is the same regardless of input size (e.g. returning a single value)."],
+  ["Time Complexity", "Why is O(log n) so fast?", "The problem is halved each step — 10,000 elements need only ~14 steps (e.g. binary search)."],
+  ["Time Complexity", "When do you get O(n²)?", "Typically with nested loops where both iterations depend on n."],
+  ["Time Complexity", "What is O(n log n)?", "Linearithmic — split work into halves and process each level; slower than O(n), far faster than O(n²) (e.g. merge sort)."],
+  ["Space Complexity", "Space complexity in plain English?", "How much extra memory your code uses while running — measured in Big-O, like time."],
+  ["Space Complexity", "What does O(1) space mean?", "A fixed amount of extra memory regardless of input size."],
+  ["Space Complexity", "What does O(n) space mean?", "Extra memory grows proportionally with input size (e.g. storing n elements)."],
+  ["Pseudocode", "Why do beginners get stuck jumping into code?", "Usually a planning gap, not a syntax gap — they have no plan for the next step."],
+  ["Pseudocode", "Two rules for good pseudocode?", "One clear step per line; use indentation and action verbs for readability."],
+  ["Pseudocode", "Two 'boring but powerful' planning tools?", "Pseudocode and flowcharts — both structure your thinking before real code."],
+  ["Strings", "How is a C-style string stored?", "A sequence of characters in consecutive memory cells, ending with a null terminator '\\0'."],
+  ["Strings", "Time complexity of common string operations?", "Index access and length are O(1); searching is O(n·m); concatenation is O(n)."],
+  ["Strings", "Why prefer std::string over char arrays (C++)?", "It manages memory automatically and has built-in methods — safer than manual char arrays."],
+  ["Linear Search", "Space complexity of linear search?", "O(1) — only a couple of extra variables (a counter and the target)."],
+  ["Linear Search", "When is linear search the right choice?", "Small or unsorted data where sorting first isn't worth it; works on any collection."],
+  ["Binary Search", "Time complexity of binary search?", "O(log n) average/worst, O(1) best — it halves the search space each step."],
+  ["Binary Search", "Iterative vs recursive binary search — space cost?", "Iterative uses O(1) space; recursive uses O(log n) for the call stack."],
+  ["Binary Search", "A real-world use of binary search?", "Database B-tree indexing, and 'git bisect' to find a faulty commit."],
+  ["Linked List", "What two parts make up a linked-list node?", "Data and a link (pointer) to the next node; the first node is the head."],
+  ["Linked List", "Three main types of linked list?", "Singly (forward only), doubly (both directions), and circular (last links back to the first)."],
+  ["Linked List", "Why are linked lists good at insertion/deletion?", "Nodes aren't contiguous, so you just relink pointers — no shifting elements like an array needs."],
+];
+
 // Glossary: term → definition. Terms appearing in card text get linked to these.
 const GLOSSARY = [
   ["Big-O", "Notation for the worst-case growth rate of an algorithm's time or space as input size n grows, ignoring constants."],
@@ -473,6 +499,16 @@ const GLOSSARY = [
   ["Binary Search", "Searching a sorted array by halving the search range each step; O(log n)."],
   ["Linear Search", "Checking each element in turn until the target is found; O(n)."],
   ["Pseudocode", "A plain, language-agnostic sketch of an algorithm's logic before writing real code."],
+  ["Bubble Sort", "Repeatedly swaps adjacent out-of-order elements; each pass bubbles the largest to the end. O(n²)."],
+  ["Selection Sort", "Repeatedly selects the minimum of the unsorted part and moves it to the front. O(n²)."],
+  ["Insertion Sort", "Builds the sorted array one element at a time by inserting each into place. O(n²), great for nearly-sorted data."],
+  ["Merge Sort", "Divide-and-conquer: split, recursively sort halves, then merge. O(n log n), stable, O(n) space."],
+  ["Quick Sort", "Divide-and-conquer using a pivot to partition; O(n log n) average, O(n²) worst, not stable."],
+  ["Node", "A single unit of a linked list or tree, holding data and link(s) to other nodes."],
+  ["Head", "The first node of a linked list, the entry point for traversal."],
+  ["Null terminator", "The '\\0' character marking the end of a C-style string."],
+  ["O(log n)", "Logarithmic time — the problem is halved each step (e.g. binary search)."],
+  ["O(n log n)", "Linearithmic time — typical of efficient comparison sorts like Merge Sort."],
 ];
 
 /* ═══════════════════════════ PURE HELPERS ═══════════════════════════ */
@@ -692,7 +728,9 @@ function seedDsaCards() {
     newCard(item.q, item.o[LETTER_IDX[item.c]], "DSA Basics", null, "d" + i, "dsa"));
   const modules = DSA_MODULE_CARDS.map(([deck, q, a], i) =>
     newCard(q, a, "DSA · " + deck, null, "dm" + i, "dsa"));
-  return [...basics, ...modules];
+  const prof = DSA_PROF_CARDS.map(([deck, q, a], i) =>
+    newCard(q, a, "DSA · " + deck, null, "dp" + i, "dsa"));
+  return [...basics, ...modules, ...prof];
 }
 
 function seedAll() { return [...seedCards(), ...seedReactCards(), ...seedDsaCards()]; }
@@ -1320,11 +1358,11 @@ function SRSSession({ cards, maxNew = 20, cram = false, studyAll = false, initia
         onClick={() => !flipped && setFlipped(true)}
         className={`mt-5 min-h-60 rounded-2xl border bg-white px-6 py-8 flex flex-col items-center justify-center text-center transition-colors ${!flipped ? "cursor-pointer hover:border-teal-300 border-stone-200" : "border-stone-200"}`}>
         <div className="text-xs uppercase tracking-wide text-stone-300 mb-3">Front</div>
-        <div className={`${fitText(card.front)} font-semibold text-stone-800 leading-snug break-words [overflow-wrap:anywhere] max-w-full`}>{card.front}</div>
+        <div className={`${fitText(card.front)} font-semibold text-stone-800 leading-snug break-words [overflow-wrap:anywhere] max-w-full`}>{subjectLabel === "DSA" ? <GlossaryText text={card.front} /> : card.front}</div>
         {flipped && (
           <>
             <div className="my-4 h-px w-12 bg-stone-200" />
-            <div className={`${fitText(card.back)} font-semibold text-teal-700 leading-snug break-words [overflow-wrap:anywhere] max-w-full`}>{card.back}</div>
+            <div className={`${fitText(card.back)} font-semibold text-teal-700 leading-snug break-words [overflow-wrap:anywhere] max-w-full`}>{subjectLabel === "DSA" ? <GlossaryText text={card.back} /> : card.back}</div>
             {card.note && <div className="mt-3 text-xs text-stone-400 italic break-words">{card.note}</div>}
           </>
         )}
@@ -1538,8 +1576,8 @@ function ModuleOverview({ cards, subjectLabel = "this subject", onEdit, onDelete
         return (
           <button key={c.id} onClick={() => { setEditId(c.id); setDraft({ front: c.front, back: c.back }); }}
             className="text-left rounded-xl border border-stone-200 bg-white p-3 hover:border-teal-300 hover:shadow-sm transition-all min-w-0">
-            <div className="text-sm font-medium text-stone-800 break-words [overflow-wrap:anywhere] line-clamp-3">{c.front}</div>
-            <div className="mt-1 text-xs text-stone-400 break-words [overflow-wrap:anywhere] line-clamp-2">{c.back}</div>
+            <div className="text-sm font-medium text-stone-800 break-words [overflow-wrap:anywhere] line-clamp-3">{subjectLabel === "DSA" ? <GlossaryText text={c.front} /> : c.front}</div>
+            <div className="mt-1 text-xs text-stone-400 break-words [overflow-wrap:anywhere] line-clamp-2">{subjectLabel === "DSA" ? <GlossaryText text={c.back} /> : c.back}</div>
             <div className="mt-1.5 inline-flex items-center gap-1 text-[10px] text-stone-300"><Pencil size={10} /> tap to edit</div>
           </button>
         );
