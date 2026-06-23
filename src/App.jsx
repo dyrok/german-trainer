@@ -385,6 +385,15 @@ function shuffle(arr) {
   return a;
 }
 function pick(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+// Shrink the font for long flashcard text so it doesn't overflow the card.
+function fitText(s, big = true) {
+  const n = (s || "").length;
+  if (n > 140) return "text-sm";
+  if (n > 90)  return "text-base";
+  if (n > 50)  return "text-lg";
+  if (n > 26)  return "text-xl";
+  return big ? "text-2xl" : "text-xl";
+}
 function pad2(n)   { return n < 10 ? "0" + n : "" + n; }
 function todayStr(){ return new Date().toISOString().slice(0, 10); }
 function yesterdayStr(){ return new Date(Date.now() - 86400000).toISOString().slice(0, 10); }
@@ -876,6 +885,44 @@ function AIExplain({ run, label = "Explain with AI", subjectLabel = "this subjec
   );
 }
 
+// "Edit with AI" affordance for a flashcard: describe a change, AI rewrites it.
+function AICardEdit({ card, subjectLabel = "this subject", onEdit }) {
+  const [open, setOpen]       = useState(false);
+  const [instr, setInstr]     = useState("");
+  const [loading, setLoading] = useState(false);
+  const [err, setErr]         = useState("");
+
+  if (!open) {
+    return (
+      <button onClick={() => setOpen(true)}
+        className="inline-flex items-center gap-1.5 text-xs font-medium text-violet-600 hover:text-violet-800 transition-colors py-1">
+        <Wand2 size={13} /> Edit with AI
+      </button>
+    );
+  }
+  return (
+    <div className="rounded-lg bg-violet-50 border border-violet-200 px-3 py-2 space-y-2">
+      <input value={instr} onChange={(e) => setInstr(e.target.value)} autoFocus
+        placeholder="Describe your edit (e.g. add an example, make the back shorter)…"
+        onKeyDown={(e) => { if (e.key === "Enter" && instr.trim()) e.currentTarget.blur(); }}
+        className="w-full rounded-lg border border-stone-200 px-2 py-1.5 text-sm focus:outline-none focus:border-violet-400" />
+      <div className="flex gap-2">
+        <Btn kind="primary" disabled={!instr.trim() || loading}
+          onClick={async () => {
+            setErr(""); setLoading(true);
+            try { const fields = await aiEditCard(card, instr.trim(), subjectLabel); onEdit(fields); setOpen(false); setInstr(""); }
+            catch (e) { setErr(e?.message || "edit failed"); }
+            setLoading(false);
+          }}>
+          {loading ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />} {loading ? "Editing…" : "Apply"}
+        </Btn>
+        <Btn onClick={() => { setOpen(false); setInstr(""); setErr(""); }}>Cancel</Btn>
+      </div>
+      {err && <div className="flex items-center gap-1.5 text-xs text-amber-700"><AlertCircle size={12} />{err}</div>}
+    </div>
+  );
+}
+
 /* ═══════════════════════════ EXAM (MCQ) ═══════════════════════════ */
 
 function Exam({ make, sectioned, onReview, subjectLabel = "this subject", timeLimitSec = 0, onAddMissed }) {
@@ -1066,7 +1113,7 @@ function Exam({ make, sectioned, onReview, subjectLabel = "this subject", timeLi
 
 /* ═══════════════════════════ SRS SESSION ═══════════════════════════ */
 
-function SRSSession({ cards, maxNew = 20, cram = false, studyAll = false, initialQueue = null, initialDone = 0, onRate, onEnd, onProgress, subjectLabel = "this subject" }) {
+function SRSSession({ cards, maxNew = 20, cram = false, studyAll = false, initialQueue = null, initialDone = 0, onRate, onEnd, onProgress, onEditCard, subjectLabel = "this subject" }) {
   function buildQueue() {
     if (initialQueue) return initialQueue.filter((id) => cards.some((c) => c.id === id));
     if (cram || studyAll) return shuffle(cards.map((c) => c.id));
@@ -1139,12 +1186,12 @@ function SRSSession({ cards, maxNew = 20, cram = false, studyAll = false, initia
         onClick={() => !flipped && setFlipped(true)}
         className={`mt-5 min-h-60 rounded-2xl border bg-white px-6 py-8 flex flex-col items-center justify-center text-center transition-colors ${!flipped ? "cursor-pointer hover:border-teal-300 border-stone-200" : "border-stone-200"}`}>
         <div className="text-xs uppercase tracking-wide text-stone-300 mb-3">Front</div>
-        <div className="text-2xl font-semibold text-stone-800 leading-snug">{card.front}</div>
+        <div className={`${fitText(card.front)} font-semibold text-stone-800 leading-snug break-words [overflow-wrap:anywhere] max-w-full`}>{card.front}</div>
         {flipped && (
           <>
             <div className="my-4 h-px w-12 bg-stone-200" />
-            <div className="text-2xl font-semibold text-teal-700 leading-snug">{card.back}</div>
-            {card.note && <div className="mt-3 text-xs text-stone-400 italic">{card.note}</div>}
+            <div className={`${fitText(card.back)} font-semibold text-teal-700 leading-snug break-words [overflow-wrap:anywhere] max-w-full`}>{card.back}</div>
+            {card.note && <div className="mt-3 text-xs text-stone-400 italic break-words">{card.note}</div>}
           </>
         )}
         {!flipped && <div className="mt-5 text-xs text-stone-400">tap or Space to reveal</div>}
@@ -1162,6 +1209,10 @@ function SRSSession({ cards, maxNew = 20, cram = false, studyAll = false, initia
               }],
               { temperature: 0.3, max_tokens: 320 },
             )} />
+          {onEditCard && (
+            <AICardEdit key={"edit" + card.id} card={card} subjectLabel={subjectLabel}
+              onEdit={(fields) => onEditCard(card.id, fields)} />
+          )}
           <div className="flex gap-2">
             <RatingBtn tone="again" label="Again" sub={fmtInt(prevInt(card, "again"))} onClick={() => rate("again")} />
             <RatingBtn tone="hard"  label="Hard"  sub={fmtInt(prevInt(card, "hard"))}  onClick={() => rate("hard")} />
@@ -1276,14 +1327,14 @@ function FlipDrill({ deck, quizMake, onBack }) {
         className="mt-5 w-full min-h-56 rounded-2xl border border-stone-200 bg-white px-6 py-8 flex flex-col items-center justify-center text-center hover:border-teal-300 transition-colors">
         {!flipped ? (
           <>
-            <div className="text-2xl font-semibold text-stone-800">{front}</div>
+            <div className={`${fitText(front)} font-semibold text-stone-800 break-words [overflow-wrap:anywhere] max-w-full`}>{front}</div>
             <div className="mt-4 text-xs text-stone-400">tap or Space to flip</div>
           </>
         ) : (
           <>
-            <div className="text-base text-stone-400">{front}</div>
-            <div className="mt-2 text-2xl font-semibold text-teal-700">{back}</div>
-            {card.note && <div className="mt-3 text-xs text-stone-500 italic">{card.note}</div>}
+            <div className="text-base text-stone-400 break-words [overflow-wrap:anywhere] max-w-full">{front}</div>
+            <div className={`mt-2 ${fitText(back)} font-semibold text-teal-700 break-words [overflow-wrap:anywhere] max-w-full`}>{back}</div>
+            {card.note && <div className="mt-3 text-xs text-stone-500 italic break-words">{card.note}</div>}
           </>
         )}
       </button>
@@ -1565,6 +1616,20 @@ async function explainAnswer({ prompt, options, answer, picked }, subjectLabel) 
     }],
     { temperature: 0.3, max_tokens: 320 },
   );
+}
+
+// Edit a flashcard per a natural-language instruction; returns { front, back }.
+async function aiEditCard(card, instruction, subjectLabel) {
+  const txt = await groqChat(
+    [{ role: "user", content:
+      `Edit this ${subjectLabel} flashcard according to the instruction. ` +
+      `Return ONLY JSON {"front":"...","back":"..."} with the full updated card (keep whatever the instruction doesn't change). No markdown.\n` +
+      `Current front: ${card.front}\nCurrent back: ${card.back}\nInstruction: ${instruction}`
+    }],
+    { json: true, temperature: 0.2, max_tokens: 400 },
+  );
+  const p = JSON.parse(stripFences(txt));
+  return { front: String(p.front || card.front), back: String(p.back || card.back) };
 }
 
 function AddCards({ onAdd, decks = [], subjectLabel = "this subject" }) {
@@ -2646,8 +2711,9 @@ export default function App() {
               });
             }}
             onProgress={(queue, done, cram) => {
-              commit((d) => ({ ...d, session: queue.length ? { subject, cram, queue, done } : null }));
+              commit((d) => ({ ...d, session: queue.length ? { subject, cram, deck: session.deck || null, queue, done } : null }));
             }}
+            onEditCard={(id, fields) => commit((d) => ({ ...d, cards: d.cards.map((c) => c.id === id ? { ...c, ...fields } : c) }))}
             onEnd={() => setSession(null)}
           />
           </div>
@@ -2675,11 +2741,18 @@ export default function App() {
       title = dname.replace(/^React · /, "");
       const inDeck = cards.filter((c) => c.deck === dname);
       const deckCards = inDeck.map((c) => ({ en: c.front, de: c.back, note: c.note }));
+      const savedMod = data.session && data.session.subject === subject && data.session.deck === dname ? data.session : null;
       content = deckCards.length ? (
         <div className="space-y-4">
+          {savedMod && (
+            <button onClick={() => setSession({ resume: true, cram: savedMod.cram, deck: dname })}
+              className="w-full rounded-xl bg-violet-600 text-white py-3 text-sm font-semibold hover:bg-violet-700 transition-colors flex items-center justify-center gap-2">
+              <RotateCcw size={17} /> Resume study · {savedMod.queue.length} left
+            </button>
+          )}
           <button onClick={() => studyModule(dname)}
             className="w-full rounded-xl bg-teal-600 text-white py-3 text-sm font-semibold hover:bg-teal-700 transition-colors flex items-center justify-center gap-2">
-            <Brain size={17} /> Study this module · {inDeck.length} card{inDeck.length !== 1 ? "s" : ""}
+            <Brain size={17} /> {savedMod ? "Restart module study" : "Study this module"} · {inDeck.length} card{inDeck.length !== 1 ? "s" : ""}
           </button>
           <div className="flex items-center gap-2">
             <span className="text-xs font-semibold uppercase tracking-wide text-stone-400">or flip through</span>
@@ -2801,7 +2874,7 @@ export default function App() {
               </div>
 
               {savedSession && (
-                <button onClick={() => setSession({ cram: savedSession.cram, resume: true })}
+                <button onClick={() => setSession({ cram: savedSession.cram, deck: savedSession.deck, resume: true })}
                   className="w-full mb-2 rounded-xl bg-violet-600 text-white py-3 text-base font-semibold hover:bg-violet-700 transition-colors flex items-center justify-center gap-2">
                   <RotateCcw size={18} /> Resume {savedSession.cram ? "practice" : "session"} · {savedSession.queue.length} left
                 </button>
