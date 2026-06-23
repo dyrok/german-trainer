@@ -10,6 +10,7 @@ import {
   Network, LineChart, Calculator, Crown, Users as UsersIcon,
 } from "lucide-react";
 import { initFirebase, emailKey, cloudSave, cloudLoad, cloudLeaderboard, cloudAllPlayers, ADMIN_EMAIL } from "./firebase.js";
+import katex from "katex";
 
 /* ═══════════════════════════ DATA ═══════════════════════════ */
 
@@ -571,6 +572,63 @@ const APTITUDE_MODULE_CARDS = [
   ["Permutations & Combinations", "Arrange so that no two vowels are together?", "Place the consonants first, then slot vowels into the gaps between them."],
 ];
 
+// Solve-it problems: { topic, q(LaTeX), answer, accept[], solution(LaTeX steps), revealOnly? }
+const APTITUDE_PROBLEMS = [
+  { topic: "Percentage", q: "56\\% \\text{ of } y = 182. \\quad \\text{Find } y.", answer: "325",
+    solution: "$\\frac{56}{100}\\times y = 182$\n$y = 182\\times\\frac{100}{56} = 325$" },
+  { topic: "Percentage", q: "\\text{What percent is } 42 \\text{ of } 336?", answer: "12.5", accept: ["12.5%"],
+    solution: "$\\frac{42}{336}\\times 100 = 12.5\\%$" },
+  { topic: "Percentage", q: "\\text{A price rises } 10\\% \\text{ then falls } 10\\%. \\text{ Net change } \\%?", answer: "1", accept: ["1%", "-1", "1% loss"],
+    solution: "Start ₹100. $+10\\%\\to 110$. Then $-10\\%$ of 110 $=11\\to 99$.\nNet $=100-99=\\mathbf{1\\%\\text{ loss}}$. (General: $-\\frac{x^2}{100}\\%$.)" },
+  { topic: "Percentage", q: "\\text{Sugar price rises } 25\\%. \\text{ \\% cut in consumption to keep spend fixed?}", answer: "20", accept: ["20%"],
+    solution: "New price index $=125$ for the same ₹100.\nNew qty $=\\frac{100}{125}=0.8$, a $\\mathbf{20\\%}$ cut. (General: $\\frac{r}{100+r}\\times100$.)" },
+  { topic: "Percentage", q: "\\text{Pass mark } 40\\%. \\text{ Scores } 20, \\text{ fails by } 40. \\text{ Max marks?}", answer: "150",
+    solution: "Passing marks $=20+40=60$.\n$\\frac{40}{100}x=60\\Rightarrow x=\\mathbf{150}$." },
+  { topic: "Percentage", q: "\\text{Selling at ₹2880 gives a } 20\\% \\text{ loss. Cost price?}", answer: "3600", accept: ["₹3600"],
+    solution: "$CP=SP\\times\\frac{100}{100-20}=2880\\times\\frac{100}{80}=\\mathbf{3600}$." },
+  { topic: "Ratio & Proportion", q: "\\text{Ratio } 3:8;\\ \\text{adding 5 to both} \\to 2:5.\\ \\text{Smaller number?}", answer: "45",
+    solution: "$\\frac{3x+5}{8x+5}=\\frac{2}{5}\\Rightarrow 15x+25=16x+10\\Rightarrow x=15$.\nSmaller $=3\\times15=\\mathbf{45}$." },
+  { topic: "Ratio & Proportion", q: "\\text{Fourth proportional of } 9,\\ 13,\\ 153?", answer: "221",
+    solution: "$\\frac{9}{13}=\\frac{153}{x}\\Rightarrow x=\\frac{153\\times13}{9}=\\mathbf{221}$." },
+  { topic: "Ratio & Proportion", q: "\\text{Mean proportional of } 7 \\text{ and } 63?", answer: "21",
+    solution: "$x=\\sqrt{7\\times63}=\\sqrt{441}=\\mathbf{21}$." },
+  { topic: "Linear Equations", q: "\\text{Two numbers sum to } 36,\\ \\text{product } 248.\\ \\text{Sum of reciprocals?}", answer: "9/62", accept: ["0.145"],
+    solution: "$\\frac{1}{x}+\\frac{1}{y}=\\frac{x+y}{xy}=\\frac{36}{248}=\\mathbf{\\frac{9}{62}}$." },
+  { topic: "Linear Equations", q: "\\text{84 heads, 282 legs (hens \\& goats). Number of hens?}", answer: "27",
+    solution: "$x+y=84,\\ 2x+4y=282$.\nSubtract $2\\times$first: $2y=114\\Rightarrow y=57$ goats, so hens $=\\mathbf{27}$." },
+  { topic: "Linear Equations", q: "\\text{Sum of 5 consecutive integers is } 335.\\ \\text{Smallest + largest?}", answer: "134",
+    solution: "Middle $x:\\ 5x=335\\Rightarrow x=67$ (numbers 65–69).\nSmallest $+$ largest $=65+69=\\mathbf{134}$." },
+  { topic: "Binomial", q: "\\text{Number of terms in } (a+b)^5?", answer: "6",
+    solution: "Terms $=n+1=5+1=\\mathbf{6}$." },
+  { topic: "Binomial", q: "\\text{Find the 3rd term of } (a+b)^5.", answer: "10a^3b^2", accept: ["10a3b2", "10a³b²"],
+    solution: "$T_{r+1}={}^nC_r\\,a^{n-r}b^{r}$ with $n=5,r=2$:\n$T_3={}^5C_2\\,a^3b^2=\\mathbf{10a^3b^2}$." },
+  { topic: "Binomial", q: "\\text{Middle term of } \\left(3x+\\tfrac{1}{\\sqrt{x}}\\right)^6 ?", revealOnly: true, answer: "540x^{3/2}",
+    solution: "7 terms ⇒ middle is the 4th term, $n=6,r=3$:\n$T_4={}^6C_3(3x)^3(x^{-1/2})^3=20\\cdot27x^3\\cdot x^{-3/2}=\\mathbf{540x^{3/2}}$." },
+  { topic: "Permutations & Combinations", q: "\\text{How many 3-digit numbers from } 2,3,4,5,6 \\text{ without repetition?}", answer: "60",
+    solution: "$5\\times4\\times3=\\mathbf{60}$." },
+  { topic: "Permutations & Combinations", q: "\\text{Arrangements of HISTORY with Y and T always together?}", answer: "1440",
+    solution: "Treat YT as one block: $6!\\times2!=720\\times2=\\mathbf{1440}$." },
+  { topic: "Permutations & Combinations", q: "\\text{Solve } \\dfrac{(n+1)!}{(n-1)!}=42.", answer: "6",
+    solution: "$(n+1)(n)=42\\Rightarrow n^2+n-42=0\\Rightarrow(n-6)(n+7)=0\\Rightarrow n=\\mathbf{6}$." },
+  { topic: "Permutations & Combinations", q: "\\text{Team of 6 from 9 men \\& 6 women, at least 3 women. Selections?}", answer: "2275",
+    solution: "$\\binom{6}{3}\\binom{9}{3}+\\binom{6}{4}\\binom{9}{2}+\\binom{6}{5}\\binom{9}{1}+\\binom{6}{6}\\binom{9}{0}$\n$=1680+540+54+1=\\mathbf{2275}$." },
+  { topic: "Statistics", q: "\\text{Mean of } 7,6,5,4,8,3,9?", answer: "6",
+    solution: "$\\bar{x}=\\frac{7+6+5+4+8+3+9}{7}=\\frac{42}{7}=\\mathbf{6}$." },
+  { topic: "Statistics", q: "\\text{A pie slice for ₹2000 spans } 60°.\\ \\text{Total investment?}", answer: "12000", accept: ["₹12000"],
+    solution: "$\\frac{60}{360}\\times T=2000\\Rightarrow T=2000\\times6=\\mathbf{12000}$." },
+  { topic: "Statistics", q: "\\text{Central angle for marks } 90 \\text{ out of total } 400?", answer: "81", accept: ["81°"],
+    solution: "$\\frac{90}{400}\\times360=\\mathbf{81°}$." },
+];
+
+const APTITUDE_FORMULAS = [
+  { topic: "Percentage", items: ["x\\% \\text{ of } y = \\frac{x}{100}\\,y", "\\text{A is }p\\%\\text{ more than B} \\Rightarrow \\text{B is }\\frac{p}{100+p}\\times100\\%\\text{ less}", "+x\\%\\text{ then }-x\\% \\Rightarrow \\text{net }-\\frac{x^2}{100}\\%", "\\text{price}\\uparrow r\\% \\Rightarrow \\text{cut use by }\\frac{r}{100+r}\\times100\\%"] },
+  { topic: "Ratio & Proportion", items: ["\\text{Fourth proportional: } a:b=c:x \\Rightarrow x=\\frac{bc}{a}", "\\text{Mean proportional of }a,b = \\sqrt{ab}", "\\frac{a}{p}=\\frac{b}{q}=\\frac{c}{r}=\\frac{a+b+c}{p+q+r}"] },
+  { topic: "Linear Equations", items: ["\\frac{1}{x}+\\frac{1}{y}=\\frac{x+y}{xy}", "\\text{Heads \\& legs: } x+y=H,\\ 2x+4y=L"] },
+  { topic: "Statistics", items: ["\\bar{x}=\\frac{\\sum f_i x_i}{\\sum f_i}", "\\text{Median}=L+\\frac{\\frac{n}{2}-cf}{f_m}\\times c", "\\text{Mode}=L+\\frac{f_m-f_1}{2f_m-f_1-f_2}\\times c", "\\text{Pie angle}=\\frac{\\text{value}}{\\text{total}}\\times360°"] },
+  { topic: "Binomial", items: ["(a+b)^n \\text{ has } n+1 \\text{ terms}", "T_{r+1}={}^nC_r\\,a^{n-r}b^{r}", "{}^nC_r=\\frac{n!}{r!(n-r)!}"] },
+  { topic: "Permutations & Combinations", items: ["{}^nP_r=\\frac{n!}{(n-r)!}\\ (\\text{order matters})", "{}^nC_r=\\frac{n!}{r!(n-r)!}\\ (\\text{order doesn't})", "{}^nC_r={}^nC_{n-r}", "\\text{Repeats: }\\frac{n!}{p!\\,q!\\cdots}", "\\text{Together} \\Rightarrow (n-1)!\\times2!"] },
+];
+
 /* ═══════════════════════════ PURE HELPERS ═══════════════════════════ */
 
 function shuffle(arr) {
@@ -801,7 +859,8 @@ function seedAptitudeCards() {
   return [...basics, ...modules];
 }
 
-function seedAll() { return [...seedCards(), ...seedReactCards(), ...seedDsaCards(), ...seedAptitudeCards()]; }
+// Aptitude is math — it's practiced via solve-mode/formulas/visuals, not SRS flashcards.
+function seedAll() { return [...seedCards(), ...seedReactCards(), ...seedDsaCards()]; }
 
 /* ─── Gamification core ─── */
 function defaultGame() {
@@ -1051,8 +1110,9 @@ function migrate(d) {
   if (!d) return freshData();
   let cards = d.cards.map((c) => c.subject ? c : { ...c, subject: "german" });
   const have = new Set(cards.map((c) => c.id));
-  const missing = [...seedReactCards(), ...seedDsaCards(), ...seedAptitudeCards()].filter((rc) => !have.has(rc.id));
+  const missing = [...seedReactCards(), ...seedDsaCards()].filter((rc) => !have.has(rc.id));
   if (missing.length) cards = [...cards, ...missing];
+  cards = cards.filter((c) => c.subject !== "aptitude"); // aptitude moved off SRS flashcards
   const dg = defaultGame();
   const game = d.game
     ? { ...dg, ...d.game, daily: { ...dg.daily, ...(d.game.daily || {}) }, stats: { ...dg.stats, ...(d.game.stats || {}) },
@@ -1268,6 +1328,32 @@ function mdInline(text, kp) {
 
 // Lightweight markdown block renderer (no dependency): paragraphs, headings,
 // bullet/ordered lists, and fenced code blocks.
+// KaTeX renderers (math for the Aptitude subject).
+function Latex({ tex, block }) {
+  let html = "";
+  try { html = katex.renderToString(String(tex), { displayMode: !!block, throwOnError: false }); } catch { html = String(tex); }
+  return <span className={block ? "block my-1 overflow-x-auto" : ""} dangerouslySetInnerHTML={{ __html: html }} />;
+}
+// Mixed prose + inline ($...$) / block ($$...$$) math, with \n as line breaks.
+function MathText({ text, className = "" }) {
+  const lines = String(text || "").split("\n");
+  return (
+    <div className={className}>
+      {lines.map((line, li) => {
+        const parts = line.split(/(\$\$[^$]+\$\$|\$[^$]+\$)/g).filter((p) => p !== "");
+        return (
+          <div key={li} className="leading-relaxed">
+            {parts.map((p, i) =>
+              p.startsWith("$$") ? <Latex key={i} tex={p.slice(2, -2)} block />
+              : p.startsWith("$") ? <Latex key={i} tex={p.slice(1, -1)} />
+              : <span key={i}>{p}</span>)}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function Markdown({ text, className = "" }) {
   const lines = String(text || "").split("\n");
   const blocks = [];
@@ -3432,6 +3518,175 @@ function ComplexityViz() {
   );
 }
 
+/* ═══════════════════════════ APTITUDE: SOLVE / FORMULAS / VISUALS ═══════════════════════════ */
+
+function parseNum(s) {
+  if (/^[-+]?\d*\.?\d+\/[-+]?\d*\.?\d+$/.test(s)) { const [a, b] = s.split("/").map(Number); return b ? a / b : null; }
+  return /^[-+]?\d*\.?\d+$/.test(s) ? parseFloat(s) : null;
+}
+function normAns(s) {
+  return String(s).toLowerCase().replace(/rs\.?/g, "").replace(/[₹,\s%°]/g, "").replace(/loss|gain/g, "").replace(/\^/g, "").replace(/³/g, "3").replace(/²/g, "2").trim();
+}
+function checkAns(input, p) {
+  const ui = normAns(input);
+  const acc = [p.answer, ...(p.accept || [])].map(normAns);
+  if (acc.includes(ui)) return true;
+  const uv = parseNum(ui);
+  if (uv != null) for (const a of acc) { const av = parseNum(a); if (av != null && Math.abs(uv - av) < 0.001 + 1e-6 * Math.abs(av)) return true; }
+  return false;
+}
+
+function SolveSet({ problems, onGame }) {
+  const [order, setOrder] = useState(() => shuffle(problems.map((_, i) => i)));
+  const [pos, setPos] = useState(0);
+  const [input, setInput] = useState("");
+  const [attempts, setAttempts] = useState(0);
+  const [status, setStatus] = useState(null); // wrong | correct
+  const [revealed, setRevealed] = useState(false);
+  const [solved, setSolved] = useState(0);
+  const p = problems[order[pos % order.length]];
+
+  function submit() {
+    if (!input.trim() || revealed || status === "correct" || p.revealOnly) return;
+    if (checkAns(input, p)) { setStatus("correct"); setSolved((s) => s + 1); onGame && onGame("quizAnswer", { ok: true, mult: 1.3 }); }
+    else { setAttempts((a) => a + 1); setStatus("wrong"); }
+  }
+  function next() { setPos((x) => x + 1); setInput(""); setAttempts(0); setStatus(null); setRevealed(false); if ((pos + 1) % order.length === 0) setOrder(shuffle(problems.map((_, i) => i))); }
+  const done = revealed || status === "correct";
+
+  return (
+    <div className="space-y-3">
+      <div className="flex justify-between text-xs text-stone-400">
+        <span className="rounded-full bg-stone-100 px-2 py-0.5 text-stone-500">{p.topic}</span>
+        <span>solved {solved}</span>
+      </div>
+      <div className="rounded-2xl border border-stone-200 bg-white p-4">
+        <div className="text-base text-stone-800"><Latex tex={p.q} block /></div>
+      </div>
+      {!p.revealOnly && (
+        <div className="flex gap-2">
+          <input value={input} onChange={(e) => setInput(e.target.value)} disabled={done}
+            onKeyDown={(e) => { if (e.key === "Enter") submit(); }} placeholder="Your answer…"
+            className="flex-1 rounded-xl border border-stone-200 px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-teal-400 disabled:bg-stone-50" />
+          <Btn kind="primary" disabled={!input.trim() || done} onClick={submit}><Check size={15} /> Check</Btn>
+        </div>
+      )}
+      {status === "wrong" && !revealed && (
+        <div className="text-sm text-rose-600">Not quite — try again. <span className="text-stone-400">({attempts} {attempts === 1 ? "try" : "tries"})</span></div>
+      )}
+      {status === "correct" && <div className="text-sm font-semibold text-emerald-600">Correct! 🎉 +XP</div>}
+      {!done && (
+        <button onClick={() => setRevealed(true)} className="text-xs font-medium text-stone-400 hover:text-teal-600">
+          {p.revealOnly ? "Show worked solution" : "I give up — reveal the answer"}
+        </button>
+      )}
+      {done && (
+        <div className="rounded-xl bg-sky-50 border border-sky-200 px-3 py-2.5 text-sm text-sky-900">
+          <div className="flex items-center gap-1.5 font-semibold text-sky-700 mb-1"><Lightbulb size={13} /> Solution</div>
+          <MathText text={p.solution} />
+        </div>
+      )}
+      <Btn className="w-full" onClick={next}>Next problem <ChevronRight size={15} /></Btn>
+    </div>
+  );
+}
+
+function FormulaSheet() {
+  return (
+    <div className="space-y-4">
+      {APTITUDE_FORMULAS.map((g) => (
+        <div key={g.topic}>
+          <div className="flex items-center gap-2 mb-2"><span className="text-xs font-semibold uppercase tracking-wide text-stone-400">{g.topic}</span><div className="h-px flex-1 bg-stone-200" /></div>
+          <div className="rounded-2xl border border-stone-200 bg-white p-4 space-y-2.5">
+            {g.items.map((t, i) => <div key={i} className="overflow-x-auto text-stone-800"><Latex tex={t} block /></div>)}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ── Aptitude visualizers (math is best when you can see it) ──
+function PercentBar() {
+  const [base, setBase] = useState(100);
+  const [pct, setPct] = useState(20);
+  const up = base * (1 + pct / 100);
+  const net = up * (1 - pct / 100);
+  const max = Math.max(base, up, net, 1);
+  const bar = (v, cls) => <div className="flex-1 flex flex-col items-center justify-end">
+    <div className="text-[11px] font-mono text-stone-500 mb-1">{Math.round(v * 100) / 100}</div>
+    <div className={`w-full rounded-t-md transition-all duration-500 ${cls}`} style={{ height: `${(v / max) * 150}px` }} />
+  </div>;
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-stone-400">Increase by x%, then decrease by x% — you never get back to the start. The loss is x²/100 %.</p>
+      <div className="rounded-2xl border border-stone-200 bg-white p-4">
+        <div className="flex items-end gap-3" style={{ height: 180 }}>
+          {bar(base, "bg-stone-300")}{bar(up, "bg-emerald-400")}{bar(net, "bg-rose-400")}
+        </div>
+        <div className="flex gap-3 mt-1 text-[10px] text-stone-400 text-center"><div className="flex-1">start</div><div className="flex-1">+{pct}%</div><div className="flex-1">−{pct}%</div></div>
+        <div className="mt-2 text-center text-sm text-stone-600">Net change: <span className="font-semibold text-rose-600">−{Math.round((1 - net / base) * 10000) / 100}%</span></div>
+      </div>
+      <div><div className="flex justify-between text-sm text-stone-600 mb-1"><span>x = {pct}%</span></div>
+        <input type="range" min="5" max="50" value={pct} onChange={(e) => setPct(+e.target.value)} className="w-full accent-teal-600" /></div>
+    </div>
+  );
+}
+
+function RatioBars() {
+  const [ratio, setRatio] = useState("2:3:5");
+  const [total, setTotal] = useState(1000);
+  const parts = ratio.split(":").map((x) => parseInt(x, 10)).filter((x) => x > 0);
+  const sum = parts.reduce((a, b) => a + b, 0) || 1;
+  const cols = ["bg-teal-500", "bg-sky-500", "bg-amber-500", "bg-rose-500", "bg-violet-500"];
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-stone-400">A ratio splits a total into shares proportional to its parts: share = part/sum × total.</p>
+      <div className="rounded-2xl border border-stone-200 bg-white p-4">
+        <div className="flex h-12 w-full rounded-lg overflow-hidden">
+          {parts.map((p, i) => <div key={i} className={`${cols[i % cols.length]} flex items-center justify-center text-white text-xs font-semibold transition-all duration-500`} style={{ width: `${(p / sum) * 100}%` }}>{Math.round((p / sum) * total)}</div>)}
+        </div>
+        <div className="mt-2 text-xs text-stone-500 text-center">{ratio} of {total}</div>
+      </div>
+      <div className="flex gap-2">
+        <input value={ratio} onChange={(e) => setRatio(e.target.value)} placeholder="2:3:5" className="flex-1 rounded-xl border border-stone-200 px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
+        <input value={total} onChange={(e) => setTotal(Math.max(1, +e.target.value || 0))} type="number" className="w-24 rounded-xl border border-stone-200 px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
+      </div>
+    </div>
+  );
+}
+
+function PieViz() {
+  const [items, setItems] = useState([{ label: "English", v: 50 }, { label: "Science", v: 80 }, { label: "Math", v: 90 }, { label: "Hindi", v: 60 }]);
+  const total = items.reduce((a, b) => a + b.v, 0) || 1;
+  const cols = ["#0d9488", "#0ea5e9", "#f59e0b", "#f43f5e", "#a78bfa", "#10b981"];
+  let acc = 0; const R = 70, C = 90;
+  const arcs = items.map((it, i) => {
+    const a0 = acc / total * 2 * Math.PI, a1 = (acc + it.v) / total * 2 * Math.PI; acc += it.v;
+    const x0 = C + R * Math.sin(a0), y0 = C - R * Math.cos(a0), x1 = C + R * Math.sin(a1), y1 = C - R * Math.cos(a1);
+    const large = a1 - a0 > Math.PI ? 1 : 0;
+    return { d: `M${C} ${C} L${x0.toFixed(1)} ${y0.toFixed(1)} A${R} ${R} 0 ${large} 1 ${x1.toFixed(1)} ${y1.toFixed(1)} Z`, col: cols[i % cols.length], angle: Math.round(it.v / total * 360), it };
+  });
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-stone-400">Each slice's central angle = (value / total) × 360°. Adjust the values and watch the pie.</p>
+      <div className="rounded-2xl border border-stone-200 bg-white p-4 flex flex-col items-center">
+        <svg viewBox="0 0 180 180" width="180" height="180">{arcs.map((a, i) => <path key={i} d={a.d} fill={a.col} stroke="#fff" strokeWidth="1.5" />)}</svg>
+        <div className="mt-2 grid grid-cols-2 gap-x-4 gap-y-1 w-full">
+          {arcs.map((a, i) => (
+            <div key={i} className="flex items-center gap-2 text-xs">
+              <span className="w-3 h-3 rounded" style={{ background: a.col }} />
+              <span className="flex-1 text-stone-600 truncate">{a.it.label}</span>
+              <span className="font-mono text-stone-400">{a.angle}°</span>
+              <input type="range" min="10" max="120" value={a.it.v} onChange={(e) => setItems((arr) => arr.map((x, k) => k === i ? { ...x, v: +e.target.value } : x))} className="w-16 accent-teal-600" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ═══════════════════════════ APP ═══════════════════════════ */
 const DARK_CSS = [
   "@keyframes gt-confetti { to { transform: translateY(110vh) rotate(720deg); opacity: .15; } }",
@@ -4076,6 +4331,11 @@ export default function App() {
     else if (subview === "reactquiz") { title = "React Quiz"; content = <Exam make={() => makeReactQuiz(15)} subjectLabel="React" onAddMissed={addMissed} onGame={gameEvent} />; }
     else if (subview === "dsaquiz")   { title = "DSA Quiz"; content = <Exam make={() => makeDsaQuiz(15)} subjectLabel="DSA" onAddMissed={addMissed} onGame={gameEvent} />; }
     else if (subview === "aptquiz")   { title = "Aptitude Quiz"; content = <Exam make={() => makeAptitudeQuiz(15)} subjectLabel="Aptitude" onAddMissed={addMissed} onGame={gameEvent} />; }
+    else if (subview === "aptsolve")  { title = "Solve Problems"; content = <SolveSet problems={APTITUDE_PROBLEMS} onGame={gameEvent} />; }
+    else if (subview === "aptformulas") { title = "Formula Sheet"; content = <FormulaSheet />; }
+    else if (subview === "viz:percent") { title = "Percentage"; content = <PercentBar />; }
+    else if (subview === "viz:ratio")   { title = "Ratio Split"; content = <RatioBars />; }
+    else if (subview === "viz:pie")     { title = "Pie / Statistics"; content = <PieViz />; }
     else if (subview === "glossary")  { title = "Glossary"; content = <Glossary />; }
     else if (subview === "viz:sorting")    { title = "Sorting Lab"; content = <SortingViz />; }
     else if (subview === "viz:search")     { title = "Binary Search"; content = <SearchViz />; }
@@ -4348,19 +4608,21 @@ export default function App() {
               📌 Exam — Aptitude-I DILR: MCQ (12:00–12:30 PM) & Theory (1:00–3:00 PM), 24 Jun 2026.
             </div>
             <div>
-              <div className="flex items-center gap-2 mb-2.5"><span className="text-xs font-semibold uppercase tracking-wide text-stone-400">Quizzes</span><div className="h-px flex-1 bg-stone-200" /></div>
+              <div className="flex items-center gap-2 mb-2.5"><span className="text-xs font-semibold uppercase tracking-wide text-stone-400">Solve &amp; study</span><div className="h-px flex-1 bg-stone-200" /></div>
               <div className="grid grid-cols-2 gap-2.5">
-                <Tile label="Aptitude Quiz" sub={`${APTITUDE_QUIZ.length} MCQs · shuffled`} icon={ListChecks} onClick={() => setSubview("aptquiz")} />
-                <Tile label="Timed Sprint" sub="best quiz in your time" icon={Clock} onClick={() => setSubview("timed")} />
-                <Tile label="AI Quiz" sub="generate from a topic" icon={Wand2} onClick={() => setSubview("aiquiz")} />
+                <Tile label="Solve problems" sub={`${APTITUDE_PROBLEMS.length} worked · type the answer`} icon={Calculator} onClick={() => setSubview("aptsolve")} />
+                <Tile label="Formula sheet" sub="every formula, in LaTeX" icon={BookText} onClick={() => setSubview("aptformulas")} />
+                <Tile label="Aptitude Quiz" sub={`${APTITUDE_QUIZ.length} MCQs (DILR)`} icon={ListChecks} onClick={() => setSubview("aptquiz")} />
+                <Tile label="Timed Sprint" sub="MCQs against the clock" icon={Clock} onClick={() => setSubview("timed")} />
               </div>
             </div>
             <div>
-              <div className="flex items-center gap-2 mb-2.5"><span className="text-xs font-semibold uppercase tracking-wide text-stone-400">Topic modules</span><div className="h-px flex-1 bg-stone-200" /></div>
+              <div className="flex items-center gap-2 mb-2.5"><span className="text-xs font-semibold uppercase tracking-wide text-stone-400">Visualize the math</span><div className="h-px flex-1 bg-stone-200" /></div>
               <div className="grid grid-cols-2 gap-2.5">
-                {subjectDecks.map((d) => (
-                  <Tile key={d} label={d.replace(/^Aptitude · /, "")} sub={moduleSub(d)} icon={Layers} onClick={() => setSubview("cards:" + d)} />
-                ))}
+                <Tile label="Percentage" sub="±x% net effect, live" icon={LineChart} onClick={() => setSubview("viz:percent")} />
+                <Tile label="Ratio split" sub="divide a total" icon={Layers} onClick={() => setSubview("viz:ratio")} />
+                <Tile label="Pie / Statistics" sub="angles from values" icon={Target} onClick={() => setSubview("viz:pie")} />
+                <Tile label="AI Quiz" sub="generate from a topic" icon={Wand2} onClick={() => setSubview("aiquiz")} />
               </div>
             </div>
           </div>
