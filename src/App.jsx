@@ -833,32 +833,45 @@ function Markdown({ text, className = "" }) {
 /* ═══════════════════════════ AI EXPLAIN ═══════════════════════════ */
 
 // Reusable "Explain with AI" affordance. `run` is an async fn returning text.
-function AIExplain({ run, label = "Explain with AI" }) {
+// When `chatContext` is provided, also offers a "Chat about this" popup.
+function AIExplain({ run, label = "Explain with AI", subjectLabel = "this subject", chatContext }) {
   const [text, setText]       = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr]         = useState("");
+  const [chatOpen, setChatOpen] = useState(false);
 
-  if (text) {
-    return (
-      <div className="rounded-lg bg-sky-50 border border-sky-200 px-3 py-2 text-xs text-sky-900 leading-relaxed">
-        <div className="flex items-center gap-1.5 font-semibold text-sky-700 mb-1"><Sparkles size={12} /> AI explanation</div>
-        <Markdown text={text} />
-      </div>
-    );
-  }
+  const chatBtn = chatContext ? (
+    <button onClick={() => setChatOpen(true)}
+      className="inline-flex items-center gap-1.5 text-xs font-medium text-teal-600 hover:text-teal-800 transition-colors py-1">
+      <MessageCircle size={13} /> Chat about this
+    </button>
+  ) : null;
+
   return (
     <div>
-      <button disabled={loading}
-        onClick={async () => {
-          setErr(""); setLoading(true);
-          try { setText(await run()); } catch (e) { setErr(e?.message || "request failed"); }
-          setLoading(false);
-        }}
-        className="inline-flex items-center gap-1.5 text-xs font-medium text-sky-600 hover:text-sky-800 transition-colors py-1 disabled:opacity-50">
-        {loading ? <Loader2 size={13} className="animate-spin" /> : <Lightbulb size={13} />}
-        {loading ? "Thinking…" : label}
-      </button>
+      {text ? (
+        <div className="rounded-lg bg-sky-50 border border-sky-200 px-3 py-2 text-xs text-sky-900 leading-relaxed">
+          <div className="flex items-center gap-1.5 font-semibold text-sky-700 mb-1"><Sparkles size={12} /> AI explanation</div>
+          <Markdown text={text} />
+          {chatBtn && <div className="mt-1.5 pt-1.5 border-t border-sky-200">{chatBtn}</div>}
+        </div>
+      ) : (
+        <div className="flex items-center gap-3">
+          <button disabled={loading}
+            onClick={async () => {
+              setErr(""); setLoading(true);
+              try { setText(await run()); } catch (e) { setErr(e?.message || "request failed"); }
+              setLoading(false);
+            }}
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-sky-600 hover:text-sky-800 transition-colors py-1 disabled:opacity-50">
+            {loading ? <Loader2 size={13} className="animate-spin" /> : <Lightbulb size={13} />}
+            {loading ? "Thinking…" : label}
+          </button>
+          {chatBtn}
+        </div>
+      )}
       {err && <div className="mt-1 flex items-center gap-1.5 text-xs text-amber-700"><AlertCircle size={12} />{err}</div>}
+      {chatOpen && <ChatPopup subjectLabel={subjectLabel} context={chatContext} onClose={() => setChatOpen(false)} />}
     </div>
   );
 }
@@ -1036,7 +1049,8 @@ function Exam({ make, sectioned, onReview, subjectLabel = "this subject", timeLi
           {q.explain && (
             <div className="rounded-lg bg-stone-50 border border-stone-200 px-3 py-2 text-xs text-stone-500">{q.explain}</div>
           )}
-          <AIExplain key={"ai" + qi}
+          <AIExplain key={"ai" + qi} subjectLabel={subjectLabel}
+            chatContext={`Quiz question: "${q.prompt}" — correct answer: "${q.answer}"` + (picked && picked !== q.answer ? `; I answered: "${picked}"` : "")}
             run={() => explainAnswer({ prompt: q.prompt, options: q.options, answer: q.answer, picked }, subjectLabel)} />
           <Btn kind="primary" className="w-full" onClick={next}>
             Next <ChevronRight size={16} />
@@ -1138,7 +1152,8 @@ function SRSSession({ cards, maxNew = 20, cram = false, studyAll = false, initia
 
       {flipped ? (
         <div className="mt-4 space-y-3">
-          <AIExplain key={card.id} label="Explain this card"
+          <AIExplain key={card.id} label="Explain this card" subjectLabel={subjectLabel}
+            chatContext={`Flashcard — front: "${card.front}"; back: "${card.back}"`}
             run={() => groqChat(
               [{ role: "user", content:
                 `You are a concise ${subjectLabel} tutor. Briefly explain this flashcard in 2-3 sentences so it sticks.\n` +
@@ -2013,12 +2028,30 @@ function TimedQuiz({ subject, subjectLabel = "this subject", onAddMissed }) {
 
 /* ═══════════════════════════ AI TUTOR (agentic) ═══════════════════════════ */
 
-function tutorKey(label) { return "tutor_chat_" + label; }
-function loadTutor(label) {
-  try { return JSON.parse(window.localStorage.getItem(tutorKey(label)) || "[]"); } catch { return []; }
+// Multi-thread chat storage, per subject. A thread = { id, title, context, messages, created }.
+function chatKey(label) { return "tutor_threads_" + label; }
+function newThread(title, context, messages) {
+  return { id: uid(), title: title || "New chat", context: context || "", messages: messages || [], created: Date.now() };
 }
-function saveTutor(label, msgs) {
-  try { window.localStorage.setItem(tutorKey(label), JSON.stringify(msgs.slice(-50))); } catch {}
+function deriveTitle(messages, context) {
+  const firstUser = (messages || []).find((m) => m.role === "user");
+  const base = (firstUser && firstUser.content) || context || "New chat";
+  return base.length > 42 ? base.slice(0, 42) + "…" : base;
+}
+function loadThreads(label) {
+  try {
+    const raw = window.localStorage.getItem(chatKey(label));
+    if (raw) { const arr = JSON.parse(raw); if (Array.isArray(arr)) return arr; }
+  } catch {}
+  // migrate legacy single-chat storage into one thread
+  try {
+    const old = window.localStorage.getItem("tutor_chat_" + label);
+    if (old) { const msgs = JSON.parse(old); if (Array.isArray(msgs) && msgs.length) return [newThread("Previous chat", "", msgs)]; }
+  } catch {}
+  return [];
+}
+function saveThreads(label, threads) {
+  try { window.localStorage.setItem(chatKey(label), JSON.stringify(threads.map((t) => ({ ...t, messages: (t.messages || []).slice(-60) })))); } catch {}
 }
 
 // Tools the agent can call to act inside the app.
@@ -2035,22 +2068,15 @@ const AGENT_TOOLS = [
   { type: "function", function: { name: "reset_progress", description: "Reset all spaced-repetition progress for the active subject (cards become new again). Use only when the user clearly asks.", parameters: { type: "object", properties: {} } } },
 ];
 
-function Tutor({ subjectLabel = "this subject", actions }) {
-  const [msgs, setMsgs]       = useState(() => loadTutor(subjectLabel));
+// Reusable chat engine. Operates on messages/setMessages owned by the parent.
+// Agentic (tools) when `actions` is provided; otherwise a plain focused chat.
+function AgentChat({ subjectLabel = "this subject", actions, messages, setMessages, context, suggestions = [] }) {
   const [input, setInput]     = useState("");
   const [loading, setLoading] = useState(false);
   const [err, setErr]         = useState("");
   const endRef = useRef(null);
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages, loading]);
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, loading]);
-  useEffect(() => { saveTutor(subjectLabel, msgs); }, [msgs, subjectLabel]);
-
-  const suggestions = subjectLabel === "React"
-    ? ["Add 5 flashcards about useEffect", "Make me a quiz on React hooks", "Start a cram session before my test"]
-    : ["Add 5 flashcards for ordering food", "Quiz me on German articles", "Start studying my due cards"];
-
-  // Execute a tool call against the app; returns a JSON-serializable result.
-  // Navigation tools defer via setNav so the chat reply renders before we leave the tab.
   async function execTool(name, args, setNav) {
     const a = actions || {};
     switch (name) {
@@ -2076,21 +2102,20 @@ function Tutor({ subjectLabel = "this subject", actions }) {
   async function send(text) {
     const q = (text ?? input).trim();
     if (!q || loading) return;
-    const visible = [...msgs, { role: "user", content: q }];
-    setMsgs(visible); setInput(""); setErr(""); setLoading(true);
+    const visible = [...messages, { role: "user", content: q }];
+    setMessages(visible); setInput(""); setErr(""); setLoading(true);
     let pendingNav = null;
     try {
       const sys = { role: "system", content:
-        `You are an agentic in-app assistant for a spaced-repetition study app. The active subject is ${subjectLabel}. ` +
-        "You can both answer study questions AND take actions using the provided tools. " +
-        "When the user asks you to do something — add/edit/delete cards, start studying or cramming, make a quiz, switch subject, change settings — DO IT with the right tool instead of telling them how. " +
-        "Use list_cards to get ids before editing or deleting. When writing flashcards, make clear atomic front/back pairs. " +
-        "After acting, confirm what you did in one short sentence. For pure study questions, just answer clearly and concisely." };
+        `You are a friendly, concise ${subjectLabel} tutor inside a study app.` +
+        (actions ? " You can also take actions with the provided tools — when asked to add/edit/delete cards, start studying or cramming, make a quiz, switch subject, or change settings, DO IT with the right tool. Use list_cards for ids before editing/deleting." : "") +
+        (context ? `\nThis chat is about: ${context}\nKeep your help focused on that.` : "") +
+        " Answer clearly and use markdown when helpful. Always reply in English." };
       const work = [sys, ...visible];
       for (let step = 0; step < 6; step++) {
-        const msg = await groqChatRaw(work, { tools: AGENT_TOOLS, temperature: 0.4, max_tokens: 1200 });
+        const msg = await groqChatRaw(work, { tools: actions ? AGENT_TOOLS : undefined, temperature: 0.4, max_tokens: 1200 });
         work.push(msg);
-        if (msg.tool_calls && msg.tool_calls.length) {
+        if (actions && msg.tool_calls && msg.tool_calls.length) {
           for (const call of msg.tool_calls) {
             let parsed = {};
             try { parsed = JSON.parse(call.function.arguments || "{}"); } catch {}
@@ -2099,32 +2124,23 @@ function Tutor({ subjectLabel = "this subject", actions }) {
             catch (e) { result = { error: e?.message || "tool failed" }; }
             work.push({ role: "tool", tool_call_id: call.id, content: JSON.stringify(result) });
           }
-          continue; // let the model react to tool results
+          continue;
         }
-        if (msg.content) setMsgs((m) => [...m, { role: "assistant", content: msg.content }]);
+        if (msg.content) setMessages((m) => [...m, { role: "assistant", content: msg.content }]);
         break;
       }
     } catch (e) { setErr(e?.message || "request failed"); }
     setLoading(false);
-    if (pendingNav) setTimeout(pendingNav, 60); // navigate after the reply renders & saves
+    if (pendingNav) setTimeout(pendingNav, 60);
   }
 
   return (
-    <div className="rounded-2xl border border-stone-200 bg-white flex flex-col" style={{ height: "60vh" }}>
-      {msgs.length > 0 && (
-        <div className="flex items-center justify-between border-b border-stone-200 px-3 py-1.5">
-          <span className="text-xs text-stone-400">{msgs.length} message{msgs.length !== 1 ? "s" : ""} · saved</span>
-          <button onClick={() => setMsgs([])}
-            className="inline-flex items-center gap-1 text-xs text-stone-400 hover:text-rose-500 transition-colors">
-            <Trash2 size={12} /> Clear
-          </button>
-        </div>
-      )}
+    <div className="flex-1 flex flex-col min-h-0">
       <div className="flex-1 overflow-auto p-3 space-y-3">
-        {msgs.length === 0 && !loading && (
+        {messages.length === 0 && !loading && (
           <div className="h-full flex flex-col items-center justify-center text-center px-4">
             <MessageCircle size={26} className="text-stone-300 mb-2" />
-            <p className="text-sm text-stone-400 mb-3">Ask your {subjectLabel} tutor anything.</p>
+            <p className="text-sm text-stone-400 mb-3">{context ? "Ask anything about this." : "Ask your " + subjectLabel + " tutor anything."}</p>
             <div className="space-y-1.5 w-full">
               {suggestions.map((s) => (
                 <button key={s} onClick={() => send(s)}
@@ -2135,7 +2151,7 @@ function Tutor({ subjectLabel = "this subject", actions }) {
             </div>
           </div>
         )}
-        {msgs.map((m, i) => (
+        {messages.map((m, i) => (
           <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
             <div className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed ${
               m.role === "user" ? "bg-teal-600 text-white whitespace-pre-wrap" : "bg-stone-100 text-stone-800 border border-stone-200"}`}>
@@ -2163,6 +2179,114 @@ function Tutor({ subjectLabel = "this subject", actions }) {
           <Send size={16} />
         </button>
       </div>
+    </div>
+  );
+}
+
+// Modal overlay (Escape closes; stops other window Escape handlers from firing).
+function Modal({ onClose, title, children }) {
+  useEffect(() => {
+    function onKey(e) { if (e.key === "Escape") { e.stopImmediatePropagation(); onClose(); } }
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [onClose]);
+  return (
+    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/40" onClick={onClose}>
+      <div className="w-full max-w-lg rounded-t-2xl sm:rounded-2xl border border-stone-200 bg-white shadow-xl flex flex-col" style={{ height: "78vh" }} onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between border-b border-stone-200 px-4 py-2.5 shrink-0">
+          <div className="text-sm font-semibold text-stone-700 truncate pr-2">{title}</div>
+          <button onClick={onClose} className="text-stone-400 hover:text-stone-700"><X size={18} /></button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+// Popup chat seeded with a context (e.g. a quiz question or card). Saved into the
+// subject's chat threads so it shows up in the Tutor tab.
+function ChatPopup({ subjectLabel = "this subject", context, onClose }) {
+  const [thread, setThread] = useState(() => newThread("About: " + (context || "this").slice(0, 36), context, []));
+  // Persist into the subject's thread list once the chat has content.
+  useEffect(() => {
+    if (!thread.messages.length) return;
+    const all = loadThreads(subjectLabel);
+    const idx = all.findIndex((t) => t.id === thread.id);
+    const titled = { ...thread, title: deriveTitle(thread.messages, thread.context) };
+    saveThreads(subjectLabel, idx >= 0 ? all.map((t) => t.id === thread.id ? titled : t) : [titled, ...all]);
+  }, [thread, subjectLabel]);
+  const setMessages = (upd) => setThread((t) => ({ ...t, messages: typeof upd === "function" ? upd(t.messages) : upd }));
+  return (
+    <Modal title={"Chat · " + subjectLabel} onClose={onClose}>
+      {context && <div className="px-4 py-2 text-xs text-stone-500 border-b border-stone-200 shrink-0"><span className="text-stone-400">About:</span> {context}</div>}
+      <AgentChat subjectLabel={subjectLabel} context={context} messages={thread.messages} setMessages={setMessages} />
+      <div className="px-4 py-1.5 text-[11px] text-stone-400 border-t border-stone-200 shrink-0">Saved to your {subjectLabel} chats →</div>
+    </Modal>
+  );
+}
+
+function Tutor({ subjectLabel = "this subject", actions }) {
+  const [threads, setThreads] = useState(() => { const t = loadThreads(subjectLabel); return t.length ? t : [newThread("New chat", "", [])]; });
+  const [activeId, setActiveId] = useState(() => threads[0].id);
+  const [editingCtx, setEditingCtx] = useState(false);
+  const [draftCtx, setDraftCtx] = useState("");
+
+  useEffect(() => { saveThreads(subjectLabel, threads); }, [threads, subjectLabel]);
+
+  const active = threads.find((t) => t.id === activeId) || threads[0];
+
+  function setMessages(upd) {
+    setThreads((ts) => ts.map((t) => {
+      if (t.id !== active.id) return t;
+      const msgs = typeof upd === "function" ? upd(t.messages) : upd;
+      return { ...t, messages: msgs, title: deriveTitle(msgs, t.context) };
+    }));
+  }
+  function newChat() { const t = newThread("New chat", "", []); setThreads((ts) => [t, ...ts]); setActiveId(t.id); }
+  function deleteActive() {
+    setThreads((ts) => { const rest = ts.filter((t) => t.id !== active.id); const next = rest.length ? rest : [newThread("New chat", "", [])]; setActiveId(next[0].id); return next; });
+  }
+  function saveCtx() { setThreads((ts) => ts.map((t) => t.id === active.id ? { ...t, context: draftCtx.trim() } : t)); setEditingCtx(false); }
+
+  const suggestions = subjectLabel === "React"
+    ? ["Add 5 flashcards about useEffect", "Make me a quiz on React hooks", "Start a cram session before my test"]
+    : ["Add 5 flashcards for ordering food", "Quiz me on German articles", "Start studying my due cards"];
+
+  return (
+    <div className="rounded-2xl border border-stone-200 bg-white flex flex-col" style={{ height: "64vh" }}>
+      {/* thread switcher */}
+      <div className="flex items-center gap-2 border-b border-stone-200 px-2.5 py-2 shrink-0">
+        <div className="relative flex-1 min-w-0">
+          <select value={active.id} onChange={(e) => setActiveId(e.target.value)}
+            className="w-full appearance-none rounded-lg border border-stone-200 bg-white pl-2.5 pr-7 py-1.5 text-xs text-stone-700 focus:outline-none focus:border-teal-400 truncate">
+            {threads.map((t) => <option key={t.id} value={t.id}>{t.title || "New chat"}{t.messages.length ? ` (${t.messages.length})` : ""}</option>)}
+          </select>
+          <ChevronDown size={13} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400" />
+        </div>
+        <button onClick={newChat} title="New chat" className="shrink-0 inline-flex items-center gap-1 rounded-lg border border-stone-200 px-2.5 py-1.5 text-xs text-teal-700 hover:bg-stone-50"><Plus size={13} /> New</button>
+        <button onClick={deleteActive} title="Delete this chat" className="shrink-0 rounded-lg border border-stone-200 px-2 py-1.5 text-stone-400 hover:text-rose-500"><Trash2 size={13} /></button>
+      </div>
+
+      {/* context row (change the context) */}
+      <div className="flex items-center gap-2 border-b border-stone-200 px-3 py-1.5 shrink-0">
+        <span className="text-[11px] uppercase tracking-wide text-stone-400 shrink-0">Focus</span>
+        {editingCtx ? (
+          <>
+            <input value={draftCtx} onChange={(e) => setDraftCtx(e.target.value)} autoFocus placeholder="What should this chat focus on?"
+              onKeyDown={(e) => { if (e.key === "Enter") saveCtx(); }}
+              className="flex-1 rounded-lg border border-stone-200 px-2 py-1 text-xs focus:outline-none focus:border-teal-400" />
+            <button onClick={saveCtx} className="text-teal-600 hover:text-teal-800"><Check size={14} /></button>
+          </>
+        ) : (
+          <>
+            <span className="flex-1 min-w-0 truncate text-xs text-stone-500">{active.context || "general"}</span>
+            <button onClick={() => { setDraftCtx(active.context || ""); setEditingCtx(true); }} className="text-stone-300 hover:text-teal-600"><Pencil size={12} /></button>
+          </>
+        )}
+      </div>
+
+      <AgentChat key={active.id} subjectLabel={subjectLabel} actions={actions} context={active.context}
+        messages={active.messages} setMessages={setMessages} suggestions={suggestions} />
     </div>
   );
 }
