@@ -1378,10 +1378,58 @@ function ModuleOverview({ cards, subjectLabel = "this subject", onEdit, onDelete
   const [editId, setEditId] = useState(null);
   const [draft, setDraft]   = useState({ front: "", back: "" });
   const [q, setQ]           = useState("");
-  const shown = cards.filter((c) => !q || (c.front + " " + c.back).toLowerCase().includes(q.toLowerCase()));
+  const [filter, setFilter] = useState("all"); // all | due | new | learning | known
+  const now = Date.now();
+
+  // Learning breakdown across the whole module (independent of search/filter).
+  const stat = (c) => c.state === "new" ? "new" : c.state === "review" ? "known" : "learning";
+  const counts = { new: 0, learning: 0, known: 0, due: 0 };
+  cards.forEach((c) => { counts[stat(c)]++; if (c.state !== "new" && c.due <= now) counts.due++; });
+  const total = cards.length || 1;
+  const pct = (n) => Math.round((n / total) * 100);
+
+  const shown = cards.filter((c) => {
+    if (q && !(c.front + " " + c.back).toLowerCase().includes(q.toLowerCase())) return false;
+    if (filter === "due")  return c.state !== "new" && c.due <= now;
+    if (filter === "all")  return true;
+    return stat(c) === filter;
+  });
+
+  const SEG = [["new", "New", "bg-stone-300", "text-stone-500"],
+               ["learning", "Learning", "bg-amber-400", "text-amber-600"],
+               ["known", "Known", "bg-teal-500", "text-teal-600"]];
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
+      {/* Learning summary — what's new / in progress / mastered, at a glance */}
+      <div className="rounded-2xl border border-stone-200 bg-white p-3">
+        <div className="flex items-baseline justify-between mb-2">
+          <div className="text-xs font-semibold text-stone-500">Module progress</div>
+          <div className="text-xs text-stone-400">{counts.known}/{cards.length} known · {pct(counts.known)}%</div>
+        </div>
+        <div className="flex h-2.5 w-full overflow-hidden rounded-full bg-stone-100">
+          {SEG.map(([k, , bar]) => counts[k] > 0 && (
+            <div key={k} className={bar} style={{ width: pct(counts[k]) + "%" }} />
+          ))}
+        </div>
+        <div className="mt-2.5 flex flex-wrap gap-2">
+          {SEG.map(([k, label, bar, txt]) => (
+            <button key={k} type="button" onClick={() => setFilter(filter === k ? "all" : k)}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors ${filter === k ? "border-stone-400 bg-stone-50" : "border-stone-200"}`}>
+              <span className={`h-2 w-2 rounded-full ${bar}`} /> <span className={txt}>{label}</span>
+              <span className="font-semibold text-stone-700">{counts[k]}</span>
+            </button>
+          ))}
+          {counts.due > 0 && (
+            <button type="button" onClick={() => setFilter(filter === "due" ? "all" : "due")}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs transition-colors ${filter === "due" ? "border-orange-400 bg-orange-50" : "border-orange-200 bg-orange-50/40"}`}>
+              <Clock size={12} className="text-orange-500" /> <span className="text-orange-600">Due now</span>
+              <span className="font-semibold text-orange-700">{counts.due}</span>
+            </button>
+          )}
+        </div>
+      </div>
+
       {cards.length > 6 && (
         <div className="relative">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-300" />
@@ -1417,12 +1465,18 @@ function ModuleOverview({ cards, subjectLabel = "this subject", onEdit, onDelete
             className="text-left rounded-xl border border-stone-200 bg-white p-3 hover:border-teal-300 hover:shadow-sm transition-all min-w-0">
             <div className="text-sm font-medium text-stone-800 break-words [overflow-wrap:anywhere] line-clamp-3">{subjectLabel === "DSA" ? <GlossaryText text={c.front} /> : c.front}</div>
             <div className="mt-1 text-xs text-stone-400 break-words [overflow-wrap:anywhere] line-clamp-2">{subjectLabel === "DSA" ? <GlossaryText text={c.back} /> : c.back}</div>
-            <div className="mt-1.5 inline-flex items-center gap-1 text-[10px] text-stone-300"><Pencil size={10} /> tap to edit</div>
+            <div className="mt-1.5 flex items-center justify-between text-[10px]">
+              <span className={`inline-flex items-center gap-1 ${stat(c) === "known" ? "text-teal-600" : stat(c) === "learning" ? "text-amber-600" : "text-stone-400"}`}>
+                <span className={`h-1.5 w-1.5 rounded-full ${stat(c) === "known" ? "bg-teal-500" : stat(c) === "learning" ? "bg-amber-400" : "bg-stone-300"}`} />
+                {c.state === "new" ? "New" : c.due <= now ? "Due now" : `Review ${relTime(c.due)}`}
+              </span>
+              <span className="inline-flex items-center gap-1 text-stone-300"><Pencil size={10} /> edit</span>
+            </div>
           </button>
         );
       })}
       </div>
-      {shown.length === 0 && <div className="text-center text-sm text-stone-400 py-4">No cards match.</div>}
+      {shown.length === 0 && <div className="text-center text-sm text-stone-400 py-4">{q ? "No cards match." : filter === "due" ? "Nothing due right now — nice work!" : `No ${filter} cards.`}</div>}
     </div>
   );
 }
