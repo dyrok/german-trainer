@@ -1622,9 +1622,16 @@ function Browse({ cards, settings, onDelete, onEdit, onSettings, onReset, onRese
   const [model, setModel]   = useState(loadGroqModel);
   const [editingId, setEditingId] = useState(null);
   const [draft, setDraft]   = useState({ front: "", back: "" });
+  const [deck, setDeck]     = useState("__all__");
   const now = Date.now();
 
+  // deck list with counts, sorted by name
+  const deckCounts = cards.reduce((m, c) => { m[c.deck] = (m[c.deck] || 0) + 1; return m; }, {});
+  const deckNames = Object.keys(deckCounts).sort();
+  const deckExists = deck === "__all__" || deckCounts[deck];
+
   const filtered = cards
+    .filter((c) => deck === "__all__" || c.deck === deck)
     .filter((c) => !q || (c.front + c.back + c.deck).toLowerCase().includes(q.toLowerCase()))
     .slice(0, 200);
 
@@ -1664,13 +1671,27 @@ function Browse({ cards, settings, onDelete, onEdit, onSettings, onReset, onRese
         </div>
       </div>
 
-      <div className="relative">
-        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-300" />
-        <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search cards…"
-          className="w-full rounded-xl border border-stone-200 pl-9 pr-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-300" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search cards…"
+            className="w-full rounded-xl border border-stone-200 pl-9 pr-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
+        </div>
+        {deckNames.length > 1 && (
+          <div className="relative shrink-0 max-w-[45%]">
+            <select value={deckExists ? deck : "__all__"} onChange={(e) => setDeck(e.target.value)}
+              className="h-full w-full appearance-none rounded-xl border border-stone-200 bg-white pl-3 pr-7 py-2 text-sm text-stone-600 focus:outline-none focus:border-teal-400">
+              <option value="__all__">All decks ({cards.length})</option>
+              {deckNames.map((d) => <option key={d} value={d}>{d} ({deckCounts[d]})</option>)}
+            </select>
+            <ChevronDown size={14} className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-stone-400" />
+          </div>
+        )}
       </div>
 
-      <div className="text-xs text-stone-400">{cards.length} cards total</div>
+      <div className="text-xs text-stone-400">
+        {deck === "__all__" ? `${cards.length} cards total` : `${filtered.length} in "${deck}" · ${cards.length} total`}
+      </div>
 
       <div className="space-y-1.5 max-h-80 overflow-auto pr-1">
         {filtered.map((c) => {
