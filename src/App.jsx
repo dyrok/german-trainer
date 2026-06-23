@@ -736,19 +736,156 @@ function seedDsaCards() {
 
 function seedAll() { return [...seedCards(), ...seedReactCards(), ...seedDsaCards()]; }
 
-function freshData() {
-  return { v: 2, subject: "german", cards: seedAll(),
-    settings: { newPerDay: 20 }, daily: { day: todayStr(), newDone: 0 }, streak: { count: 0, lastDay: null }, session: null };
+/* ─── Gamification core ─── */
+function defaultGame() {
+  return {
+    xp: 0, coins: 0,
+    achievements: {},                 // id -> ISO date unlocked
+    daily: { day: todayStr(), reviewed: 0, quizzes: 0, modules: 0, claimed: false },
+    history: {},                      // "YYYY-MM-DD" -> reviews that day
+    longestStreak: 0,
+    stats: { reviews: 0, quizzes: 0, perfect: 0, correct: 0, bestQuizPct: 0, mostReviewsDay: 0 },
+    cosmetics: { owned: [], equipped: { theme: "", cardBack: "", title: "" } },
+    flags: {},                        // misc one-time flags (subjects used, tutor used, etc.)
+    sound: true,
+  };
+}
+// Level curve: XP within level L = 100 + (L-1)*50 (L1→2 needs 100, L2→3 needs 150, …).
+function levelInfo(xp) {
+  let L = 1, prev = 0, need = 100;
+  while (xp >= prev + need) { prev += need; L++; need = 100 + (L - 1) * 50; }
+  return { level: L, into: xp - prev, span: need };
+}
+const XP_REVIEW = { again: 2, hard: 4, good: 6, easy: 8 };
+const XP_QUIZ_CORRECT = 10, XP_PERFECT_BONUS = 50, COINS_PER_LEVEL = 25;
+
+// Achievements — { id, name, desc, icon(emoji), tier, xp, coins, test(g, data) }
+const ACHIEVEMENTS = [
+  { id: "first_review", name: "First Step", desc: "Review your first card", tier: "bronze", icon: "👣", xp: 10, coins: 10, test: (g) => g.stats.reviews >= 1 },
+  { id: "rev_50", name: "Getting Warm", desc: "Review 50 cards", tier: "bronze", icon: "🔥", xp: 25, coins: 20, test: (g) => g.stats.reviews >= 50 },
+  { id: "rev_250", name: "Committed", desc: "Review 250 cards", tier: "silver", icon: "💪", xp: 60, coins: 50, test: (g) => g.stats.reviews >= 250 },
+  { id: "rev_1000", name: "Card Crusher", desc: "Review 1000 cards", tier: "gold", icon: "🏆", xp: 200, coins: 150, test: (g) => g.stats.reviews >= 1000 },
+  { id: "streak_3", name: "On a Roll", desc: "3-day streak", tier: "bronze", icon: "🔥", xp: 20, coins: 15, test: (g) => (g.longestStreak || 0) >= 3 },
+  { id: "streak_7", name: "Week Warrior", desc: "7-day streak", tier: "silver", icon: "📅", xp: 50, coins: 40, test: (g) => (g.longestStreak || 0) >= 7 },
+  { id: "streak_30", name: "Unstoppable", desc: "30-day streak", tier: "gold", icon: "⚡", xp: 150, coins: 120, test: (g) => (g.longestStreak || 0) >= 30 },
+  { id: "quiz_1", name: "Quiz Rookie", desc: "Finish a quiz", tier: "bronze", icon: "📝", xp: 15, coins: 10, test: (g) => g.stats.quizzes >= 1 },
+  { id: "quiz_perfect", name: "Flawless", desc: "Score 100% on a quiz", tier: "silver", icon: "💯", xp: 50, coins: 40, test: (g) => g.stats.perfect >= 1 },
+  { id: "quiz_10", name: "Quiz Master", desc: "Finish 10 quizzes", tier: "silver", icon: "🎯", xp: 60, coins: 50, test: (g) => g.stats.quizzes >= 10 },
+  { id: "lvl_5", name: "Level 5", desc: "Reach level 5", tier: "bronze", icon: "⭐", xp: 0, coins: 30, test: (g) => levelInfo(g.xp).level >= 5 },
+  { id: "lvl_10", name: "Level 10", desc: "Reach level 10", tier: "silver", icon: "🌟", xp: 0, coins: 60, test: (g) => levelInfo(g.xp).level >= 10 },
+  { id: "lvl_25", name: "Level 25", desc: "Reach level 25", tier: "gold", icon: "💫", xp: 0, coins: 200, test: (g) => levelInfo(g.xp).level >= 25 },
+  { id: "polyglot", name: "Polyglot", desc: "Study all three subjects", tier: "silver", icon: "🌍", xp: 40, coins: 30, test: (g, data) => new Set((data.cards || []).filter((c) => c.reps > 0).map((c) => c.subject)).size >= 3 },
+  { id: "tutor", name: "Curious", desc: "Use the AI tutor", tier: "bronze", icon: "🤖", xp: 15, coins: 10, test: (g) => !!g.flags.tutor },
+  { id: "viz", name: "Visual Learner", desc: "Open a DSA visualizer", tier: "bronze", icon: "📊", xp: 15, coins: 10, test: (g) => !!g.flags.viz },
+  { id: "rich", name: "Coin Hoarder", desc: "Bank 300 coins", tier: "silver", icon: "💰", xp: 0, coins: 0, test: (g) => g.coins >= 300 },
+];
+function checkAchievements(g, data) {
+  return ACHIEVEMENTS.filter((a) => !g.achievements[a.id] && a.test(g, data));
+}
+const TIER_COL = { bronze: "text-amber-700 bg-amber-50 border-amber-200", silver: "text-stone-600 bg-stone-100 border-stone-300", gold: "text-yellow-700 bg-yellow-50 border-yellow-300" };
+
+function Confetti() {
+  const cols = ["#0d9488", "#f59e0b", "#f43f5e", "#0ea5e9", "#10b981", "#a78bfa"];
+  return (
+    <div className="fixed inset-0 pointer-events-none z-[60] overflow-hidden">
+      {Array.from({ length: 90 }, (_, i) => {
+        const size = 6 + Math.random() * 7;
+        return <span key={i} style={{ position: "absolute", top: "-12px", left: Math.random() * 100 + "%", width: size, height: size * 0.55,
+          background: cols[i % cols.length], borderRadius: 1,
+          animation: `gt-confetti ${1.2 + Math.random() * 1.4}s ${Math.random() * 0.4}s ease-in forwards`,
+          transform: `rotate(${Math.random() * 360}deg)` }} />;
+      })}
+    </div>
+  );
 }
 
-// Upgrade older saved data: tag legacy cards german, and merge in any new seed cards by id.
+// Renders the first queued celebration (level-up / achievement) over a confetti burst.
+function CelebrationModal({ item, onClose }) {
+  useEffect(() => { const t = setTimeout(onClose, 4200); return () => clearTimeout(t); }, [item, onClose]);
+  const isLevel = item.kind === "level";
+  return (
+    <>
+      <Confetti />
+      <div className="fixed inset-0 z-[61] flex items-center justify-center p-4 bg-black/40" onClick={onClose}>
+        <div className="w-full max-w-xs rounded-2xl border border-stone-200 bg-white p-6 text-center shadow-xl" onClick={(e) => e.stopPropagation()}>
+          {isLevel ? (
+            <>
+              <div className="mx-auto w-16 h-16 rounded-2xl bg-teal-600 text-white flex items-center justify-center text-2xl font-bold">{item.level}</div>
+              <h2 className="mt-3 text-xl font-bold text-stone-800">Level up!</h2>
+              <p className="text-sm text-stone-500 mt-1">You reached level {item.level} and earned coins. Keep it going! 🎉</p>
+            </>
+          ) : (
+            <>
+              <div className="mx-auto w-16 h-16 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center text-3xl">{item.a.icon}</div>
+              <div className={`mt-2 inline-block rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${TIER_COL[item.a.tier] || ""}`}>{item.a.tier}</div>
+              <h2 className="mt-1 text-lg font-bold text-stone-800">{item.a.name}</h2>
+              <p className="text-sm text-stone-500 mt-1">{item.a.desc}</p>
+              <p className="text-xs text-teal-600 font-semibold mt-2">+{item.a.xp} XP{item.a.coins ? ` · +${item.a.coins} 🪙` : ""}</p>
+            </>
+          )}
+          <button onClick={onClose} className="mt-4 w-full rounded-xl bg-teal-600 text-white py-2.5 text-sm font-semibold hover:bg-teal-700">Nice!</button>
+        </div>
+      </div>
+    </>
+  );
+}
+
+// Compact level + XP bar + coins strip (Study tab header).
+function XpStrip({ game, onProfile }) {
+  const { level, into, span } = levelInfo(game.xp);
+  return (
+    <button onClick={onProfile} className="w-full rounded-2xl border border-stone-200 bg-white px-4 py-2.5 flex items-center gap-3 hover:border-teal-300 transition-colors">
+      <div className="shrink-0 w-9 h-9 rounded-xl bg-teal-600 text-white flex flex-col items-center justify-center leading-none">
+        <span className="text-[8px] uppercase opacity-80">Lv</span><span className="text-sm font-bold">{level}</span>
+      </div>
+      <div className="flex-1 min-w-0">
+        <div className="flex justify-between text-[11px] text-stone-400 mb-1"><span>Level {level}</span><span>{into}/{span} XP</span></div>
+        <div className="h-2 rounded-full bg-stone-200 overflow-hidden"><div className="h-full bg-teal-500 transition-all duration-500" style={{ width: `${Math.round((into / span) * 100)}%` }} /></div>
+      </div>
+      <div className="shrink-0 inline-flex items-center gap-1 text-sm font-semibold text-amber-600">🪙 {game.coins}</div>
+    </button>
+  );
+}
+
+// Tiny Web Audio chime (no assets). type: correct | levelup | unlock | wrong
+let _actx = null;
+function playSfx(type) {
+  try {
+    _actx = _actx || new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = _actx, now = ctx.currentTime;
+    const notes = { correct: [660, 880], levelup: [523, 659, 784, 1047], unlock: [784, 1047], wrong: [330, 247] }[type] || [660];
+    notes.forEach((f, i) => {
+      const o = ctx.createOscillator(), gn = ctx.createGain();
+      o.type = "sine"; o.frequency.value = f;
+      const t0 = now + i * 0.09;
+      gn.gain.setValueAtTime(0.0001, t0); gn.gain.exponentialRampToValueAtTime(0.18, t0 + 0.02); gn.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.22);
+      o.connect(gn); gn.connect(ctx.destination); o.start(t0); o.stop(t0 + 0.24);
+    });
+    if (navigator.vibrate && (type === "levelup" || type === "unlock")) navigator.vibrate(type === "levelup" ? [20, 40, 30] : 25);
+  } catch {}
+}
+
+function freshData() {
+  return { v: 2, subject: "german", cards: seedAll(),
+    settings: { newPerDay: 20 }, daily: { day: todayStr(), newDone: 0 }, streak: { count: 0, lastDay: null }, session: null,
+    game: defaultGame(), profile: { name: "", email: "" } };
+}
+
+// Upgrade older saved data: tag legacy cards german, merge new seed cards, ensure game/profile.
 function migrate(d) {
   if (!d) return freshData();
   let cards = d.cards.map((c) => c.subject ? c : { ...c, subject: "german" });
   const have = new Set(cards.map((c) => c.id));
   const missing = [...seedReactCards(), ...seedDsaCards()].filter((rc) => !have.has(rc.id));
   if (missing.length) cards = [...cards, ...missing];
-  return { ...d, v: 2, subject: d.subject || "german", cards, streak: d.streak || { count: 0, lastDay: null }, session: d.session || null };
+  const dg = defaultGame();
+  const game = d.game
+    ? { ...dg, ...d.game, daily: { ...dg.daily, ...(d.game.daily || {}) }, stats: { ...dg.stats, ...(d.game.stats || {}) },
+        cosmetics: { ...dg.cosmetics, ...(d.game.cosmetics || {}), equipped: { ...dg.cosmetics.equipped, ...((d.game.cosmetics || {}).equipped || {}) } },
+        flags: { ...(d.game.flags || {}) } }
+    : dg;
+  return { ...d, v: 2, subject: d.subject || "german", cards, streak: d.streak || { count: 0, lastDay: null }, session: d.session || null,
+    game, profile: d.profile || { name: "", email: "" } };
 }
 
 // Build a randomized quiz in Exam format from a {q,o,c} bank (options shuffled each round)
@@ -1075,7 +1212,7 @@ function AICardEdit({ card, subjectLabel = "this subject", onEdit }) {
 
 /* ═══════════════════════════ EXAM (MCQ) ═══════════════════════════ */
 
-function Exam({ make, sectioned, onReview, subjectLabel = "this subject", timeLimitSec = 0, onAddMissed }) {
+function Exam({ make, sectioned, onReview, subjectLabel = "this subject", timeLimitSec = 0, onAddMissed, onGame }) {
   const [questions, setQuestions] = useState(make);
   const [qi, setQi]    = useState(0);
   const [picked, setPk] = useState(null);
@@ -1084,6 +1221,8 @@ function Exam({ make, sectioned, onReview, subjectLabel = "this subject", timeLi
   const [fresh, setFresh] = useState(false);  // trigger re-generate
   const [timeLeft, setTimeLeft] = useState(timeLimitSec);
   const [added, setAdded] = useState(false);  // missed-to-flashcards done
+  const [combo, setCombo] = useState(0);       // consecutive-correct streak
+  const finishedFired = useRef(false);
 
   const finished = qi >= questions.length;
   const q = finished ? null : questions[qi];
@@ -1097,12 +1236,24 @@ function Exam({ make, sectioned, onReview, subjectLabel = "this subject", timeLi
     return () => clearTimeout(t);
   }, [timeLeft, timeLimitSec, finished, questions.length]);
 
+  // award XP for the whole quiz once, when it finishes
+  useEffect(() => {
+    if (finished && !finishedFired.current) {
+      finishedFired.current = true;
+      const ok = history.filter((h) => h.ok).length;
+      onGame && onGame("quizDone", { pct: questions.length ? Math.round((ok / questions.length) * 100) : 0 });
+    }
+    if (!finished) finishedFired.current = false;
+  }, [finished]);
+
   function choose(opt) {
     if (picked) return;
     setPk(opt);
     const ok = opt === q.answer;
     setH((h) => [...h, { q, picked: opt, ok }]);
     onReview && onReview(ok);
+    if (ok) { onGame && onGame("quizAnswer", { ok: true, mult: 1 + Math.min(combo, 5) * 0.1 }); setCombo((c) => c + 1); }
+    else { onGame && onGame("quizAnswer", { ok: false }); setCombo(0); }
   }
 
   function next() { setPk(null); setShowT(false); setQi((n) => n + 1); }
@@ -1191,6 +1342,7 @@ function Exam({ make, sectioned, onReview, subjectLabel = "this subject", timeLi
       <div className="flex justify-between items-center text-xs text-stone-400 mb-2">
         <span className="rounded-full bg-stone-100 px-2 py-0.5 text-stone-500">{q.section}</span>
         <div className="flex items-center gap-2">
+          {combo >= 2 && <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 text-orange-600 px-2 py-0.5 font-semibold">🔥 {combo} combo</span>}
           {timeLimitSec > 0 && (
             <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 font-mono font-semibold ${timeLeft <= 30 ? "bg-rose-50 text-rose-600" : "bg-sky-50 text-sky-600"}`}>
               <Clock size={11} /> {Math.floor(timeLeft / 60)}:{pad2(timeLeft % 60)}
@@ -2255,7 +2407,7 @@ function Browse({ cards, settings, onDelete, onEdit, onSettings, onReset, onRese
 
 /* ═══════════════════════════ AI QUIZ MAKER ═══════════════════════════ */
 
-function AIQuizMaker({ subjectLabel = "this subject", onAddMissed }) {
+function AIQuizMaker({ subjectLabel = "this subject", onAddMissed, onGame }) {
   const [topic, setTopic]   = useState("");
   const [n, setN]           = useState(8);
   const [loading, setLoading] = useState(false);
@@ -2279,7 +2431,7 @@ function AIQuizMaker({ subjectLabel = "this subject", onAddMissed }) {
         <button onClick={() => setQuestions(null)} className="inline-flex items-center gap-2 text-sm text-stone-500 hover:text-stone-800">
           <ArrowLeft size={15} /> New quiz
         </button>
-        <Exam make={() => questions} subjectLabel={subjectLabel} onAddMissed={onAddMissed} />
+        <Exam make={() => questions} subjectLabel={subjectLabel} onAddMissed={onAddMissed} onGame={onGame} />
       </div>
     );
   }
@@ -2315,7 +2467,7 @@ const SECS_PER_Q = 35; // assumed pace for sizing a timed quiz
 
 function sprintCount(min) { return Math.max(5, Math.min(25, Math.round((min * 60) / SECS_PER_Q))); }
 
-function TimedQuiz({ subject, subjectLabel = "this subject", onAddMissed }) {
+function TimedQuiz({ subject, subjectLabel = "this subject", onAddMissed, onGame }) {
   const [phase, setPhase]     = useState("setup"); // setup | loading | run
   const [minutes, setMinutes] = useState(10);
   const [built, setBuilt]     = useState(null);    // { questions, timeLimitSec }
@@ -2352,7 +2504,7 @@ function TimedQuiz({ subject, subjectLabel = "this subject", onAddMissed }) {
           <ArrowLeft size={15} /> New sprint
         </button>
         {note && <div className="flex items-start gap-1.5 text-xs text-stone-400"><Sparkles size={12} className="mt-0.5 shrink-0 text-sky-400" />{note}</div>}
-        <Exam make={() => built.questions} timeLimitSec={built.timeLimitSec} subjectLabel={subjectLabel} onAddMissed={onAddMissed} />
+        <Exam make={() => built.questions} timeLimitSec={built.timeLimitSec} subjectLabel={subjectLabel} onAddMissed={onAddMissed} onGame={onGame} />
       </div>
     );
   }
@@ -3105,6 +3257,7 @@ function ComplexityViz() {
 
 /* ═══════════════════════════ APP ═══════════════════════════ */
 const DARK_CSS = [
+  "@keyframes gt-confetti { to { transform: translateY(110vh) rotate(720deg); opacity: .15; } }",
   ".dark { color-scheme: dark; }",
   ".dark .bg-stone-100 { background-color: #0c0a09; }",
   ".dark .bg-white     { background-color: #1c1917; }",
@@ -3348,6 +3501,7 @@ export default function App() {
   const [onboarded, setOnboarded] = useState(isOnboarded);
   const [installPrompt, setInstallPrompt] = useState(null); // captured beforeinstallprompt event
   const [search, setSearch] = useState(""); // global study-tab search
+  const [celebrate, setCelebrate] = useState([]); // queue of {kind:'level'|'achievement', ...}
 
   // Inject CSS once into <head>
   useEffect(() => {
@@ -3383,6 +3537,44 @@ export default function App() {
   }
 
   function showFlash(msg) { setFlash(msg); setTimeout(() => setFlash(""), 2500); }
+
+  // Central gamification event: award XP/coins, track stats/daily/history, detect level-ups & achievements.
+  function gameEvent(type, payload = {}) {
+    const today = todayStr();
+    const cur = data.game || defaultGame();
+    let g = cur.daily.day !== today
+      ? { ...cur, daily: { day: today, reviewed: 0, quizzes: 0, modules: 0, claimed: false } }
+      : { ...cur };
+    g = { ...g, stats: { ...g.stats }, daily: { ...g.daily }, history: { ...g.history }, flags: { ...g.flags }, achievements: { ...g.achievements } };
+    let addXp = 0;
+    if (type === "review") {
+      addXp = XP_REVIEW[payload.rating] || 4;
+      g.stats.reviews++; g.daily.reviewed++;
+      g.history[today] = (g.history[today] || 0) + 1;
+      g.stats.mostReviewsDay = Math.max(g.stats.mostReviewsDay || 0, g.history[today]);
+    } else if (type === "quizAnswer") {
+      if (payload.ok) { addXp = Math.round(XP_QUIZ_CORRECT * (payload.mult || 1)); g.stats.correct++; }
+    } else if (type === "quizDone") {
+      g.stats.quizzes++; g.daily.quizzes++;
+      g.stats.bestQuizPct = Math.max(g.stats.bestQuizPct || 0, payload.pct || 0);
+      if (payload.pct === 100) { g.stats.perfect++; addXp += XP_PERFECT_BONUS; }
+    } else if (type === "module") { g.daily.modules++; }
+    else if (type === "flag") { g.flags[payload.flag] = true; }
+    g.xp += addXp;
+    const sc = (data.streak && data.streak.lastDay) ? data.streak.count : 0;
+    g.longestStreak = Math.max(g.longestStreak || 0, sc);
+    // achievements
+    const unlocked = checkAchievements(g, data);
+    unlocked.forEach((a) => { g.achievements[a.id] = today; g.xp += a.xp || 0; g.coins += a.coins || 0; });
+    // level-up (after achievement XP too)
+    const before = levelInfo(cur.xp).level, after = levelInfo(g.xp).level;
+    if (after > before) g.coins += (after - before) * COINS_PER_LEVEL;
+    g.stats.level = after;
+    commit((d) => ({ ...d, game: g }));
+    if (after > before) setCelebrate((c) => [...c, { kind: "level", level: after }]);
+    unlocked.forEach((a) => setCelebrate((c) => [...c, { kind: "achievement", a }]));
+    if (g.sound) { if (after > before) playSfx("levelup"); else if (unlocked.length) playSfx("unlock"); else if (addXp > 0 && type !== "review") playSfx("correct"); }
+  }
 
   function addCards(list, deck) {
     const subj = (data && data.subject) || "german";
@@ -3468,6 +3660,14 @@ export default function App() {
     return () => window.removeEventListener("popstate", onPop);
   }, [session, subview, tab]);
 
+  // Award explorer achievements when the tutor or a visualizer is first opened.
+  useEffect(() => {
+    if (!data) return;
+    const g = data.game || {};
+    if (tab === "tutor" && !(g.flags && g.flags.tutor)) gameEvent("flag", { flag: "tutor" });
+    if (subview && subview.startsWith("viz:") && !(g.flags && g.flags.viz)) gameEvent("flag", { flag: "viz" });
+  }, [tab, subview]);
+
   if (!onboarded) {
     return <Onboarding onDone={() => setOnboarded(true)} />;
   }
@@ -3523,6 +3723,7 @@ export default function App() {
   function studyModule(deckName) {
     commit((d) => ({ ...d, session: null }));
     setSession({ studyAll: true, deck: deckName });
+    gameEvent("module");
   }
 
   // Actions exposed to the agentic Tutor.
@@ -3571,6 +3772,10 @@ export default function App() {
   };
 
   const savedSession = data.session && data.session.subject === subject ? data.session : null;
+  const game = data.game || defaultGame();
+  const celebrationOverlay = celebrate.length > 0
+    ? <CelebrationModal item={celebrate[0]} onClose={() => setCelebrate((c) => c.slice(1))} />
+    : null;
 
   if (session) {
     const resuming = session.resume && savedSession;
@@ -3579,6 +3784,7 @@ export default function App() {
     return (
       <>
         <DarkToggle dark={dark} onToggle={toggleDark} />
+        {celebrationOverlay}
         <div className="min-h-screen bg-stone-100">
           <div className="mx-auto max-w-xl px-4 py-6">
             <button onClick={() => setSession(null)} className="inline-flex items-center gap-2 text-sm text-stone-500 hover:text-stone-800 mb-5">
@@ -3605,6 +3811,7 @@ export default function App() {
                   daily: wasNew ? { ...d.daily, newDone: d.daily.newDone + 1 } : d.daily,
                 };
               });
+              gameEvent("review", { rating });
             }}
             onProgress={(queue, done, cram) => {
               commit((d) => ({ ...d, session: queue.length ? { subject, cram, deck: session.deck || null, queue, done } : null }));
@@ -3628,14 +3835,14 @@ export default function App() {
     let title = "", content = null;
     const addMissed = (cardList) => addCards(cardList, "Review");
 
-    if (subview === "truefalse") { title = "True / False"; content = <Exam make={() => buildN(genTF, 12)} subjectLabel={subjMeta.label} onAddMissed={addMissed} />; }
+    if (subview === "truefalse") { title = "True / False"; content = <Exam make={() => buildN(genTF, 12)} subjectLabel={subjMeta.label} onAddMissed={addMissed} onGame={gameEvent} />; }
     else if (subview === "numbers")   { title = "Numbers"; content = <NumTrainer />; }
-    else if (subview === "reading")   { title = "Reading"; content = <Exam make={() => buildN(genReading, 8)} subjectLabel={subjMeta.label} onAddMissed={addMissed} />; }
-    else if (subview === "en2de")     { title = "EN → DE"; content = <Exam make={() => buildN(genEN2DE, 12)} subjectLabel={subjMeta.label} onAddMissed={addMissed} />; }
-    else if (subview === "countries") { title = "Languages"; content = <Exam make={() => buildN(genCountry, 12)} subjectLabel={subjMeta.label} onAddMissed={addMissed} />; }
-    else if (subview === "time")      { title = "Time";     content = <Exam make={() => buildN(genTime, 10)} subjectLabel={subjMeta.label} onAddMissed={addMissed} />; }
-    else if (subview === "reactquiz") { title = "React Quiz"; content = <Exam make={() => makeReactQuiz(15)} subjectLabel="React" onAddMissed={addMissed} />; }
-    else if (subview === "dsaquiz")   { title = "DSA Quiz"; content = <Exam make={() => makeDsaQuiz(15)} subjectLabel="DSA" onAddMissed={addMissed} />; }
+    else if (subview === "reading")   { title = "Reading"; content = <Exam make={() => buildN(genReading, 8)} subjectLabel={subjMeta.label} onAddMissed={addMissed} onGame={gameEvent} />; }
+    else if (subview === "en2de")     { title = "EN → DE"; content = <Exam make={() => buildN(genEN2DE, 12)} subjectLabel={subjMeta.label} onAddMissed={addMissed} onGame={gameEvent} />; }
+    else if (subview === "countries") { title = "Languages"; content = <Exam make={() => buildN(genCountry, 12)} subjectLabel={subjMeta.label} onAddMissed={addMissed} onGame={gameEvent} />; }
+    else if (subview === "time")      { title = "Time";     content = <Exam make={() => buildN(genTime, 10)} subjectLabel={subjMeta.label} onAddMissed={addMissed} onGame={gameEvent} />; }
+    else if (subview === "reactquiz") { title = "React Quiz"; content = <Exam make={() => makeReactQuiz(15)} subjectLabel="React" onAddMissed={addMissed} onGame={gameEvent} />; }
+    else if (subview === "dsaquiz")   { title = "DSA Quiz"; content = <Exam make={() => makeDsaQuiz(15)} subjectLabel="DSA" onAddMissed={addMissed} onGame={gameEvent} />; }
     else if (subview === "glossary")  { title = "Glossary"; content = <Glossary />; }
     else if (subview === "viz:sorting")    { title = "Sorting Lab"; content = <SortingViz />; }
     else if (subview === "viz:search")     { title = "Binary Search"; content = <SearchViz />; }
@@ -3643,8 +3850,8 @@ export default function App() {
     else if (subview === "viz:stackqueue") { title = "Stack & Queue"; content = <StackQueueViz />; }
     else if (subview === "viz:linkedlist") { title = "Linked List"; content = <LinkedListViz />; }
     else if (subview === "viz:complexity") { title = "Big-O Growth"; content = <ComplexityViz />; }
-    else if (subview === "aiquiz")    { title = "AI Quiz Generator"; content = <AIQuizMaker subjectLabel={subjMeta.label} onAddMissed={addMissed} />; }
-    else if (subview === "timed")     { title = "Timed Sprint"; content = <TimedQuiz subject={subject} subjectLabel={subjMeta.label} onAddMissed={addMissed} />; }
+    else if (subview === "aiquiz")    { title = "AI Quiz Generator"; content = <AIQuizMaker subjectLabel={subjMeta.label} onAddMissed={addMissed} onGame={gameEvent} />; }
+    else if (subview === "timed")     { title = "Timed Sprint"; content = <TimedQuiz subject={subject} subjectLabel={subjMeta.label} onAddMissed={addMissed} onGame={gameEvent} />; }
     else if (subview.startsWith("cards:")) {
       const dname = subview.slice(6);
       title = dname.replace(/^React · /, "");
@@ -3686,12 +3893,12 @@ export default function App() {
       );
     }
     else if (subview === "agentquiz") { title = "AI Quiz"; content = agentQuiz && agentQuiz.length
-      ? <Exam make={() => agentQuiz} subjectLabel={subjMeta.label} onAddMissed={addMissed} />
+      ? <Exam make={() => agentQuiz} subjectLabel={subjMeta.label} onAddMissed={addMissed} onGame={gameEvent} />
       : <div className="text-sm text-stone-400">No quiz to show.</div>; }
     else if (subview.startsWith("test:")) {
       const n = subview.split(":")[1];
       title = "Mock Test " + n;
-      content = <Exam make={buildTest} sectioned subjectLabel={subjMeta.label} onAddMissed={addMissed} />;
+      content = <Exam make={buildTest} sectioned subjectLabel={subjMeta.label} onAddMissed={addMissed} onGame={gameEvent} />;
     }
     else if (subview.startsWith("deck:")) {
       const key = subview.slice(5);
@@ -3708,6 +3915,7 @@ export default function App() {
     return (
       <>
         <DarkToggle dark={dark} onToggle={toggleDark} />
+        {celebrationOverlay}
         <div className="min-h-screen bg-stone-100">
           <div className="mx-auto max-w-xl px-4 py-6">
             <button onClick={() => setSubview(null)} className="inline-flex items-center gap-2 text-sm text-stone-500 hover:text-stone-800 mb-5">
@@ -3739,6 +3947,7 @@ export default function App() {
     <div className="min-h-screen bg-stone-100 text-stone-800 pb-20">
       <div className="mx-auto max-w-xl px-4 py-6">
         <DarkToggle dark={dark} onToggle={toggleDark} />
+        {celebrationOverlay}
         <button onClick={() => setSubview("help")} aria-label="How to use the app" title="How to use the app"
           style={{ position: "fixed", top: 14, right: 58, zIndex: 9999, width: 36, height: 36, borderRadius: "50%",
             display: "flex", alignItems: "center", justifyContent: "center",
@@ -3771,6 +3980,7 @@ export default function App() {
         {/* ─── STUDY TAB ─── */}
         {tab === "study" && (
           <div className="space-y-5">
+            <XpStrip game={game} onProfile={() => setTab("profile")} />
             <div className="flex items-start justify-between gap-3">
               <div>
                 <h1 className="text-2xl font-bold tracking-tight">
@@ -4116,6 +4326,76 @@ export default function App() {
             <Tutor subjectLabel={subjMeta.label} actions={agentActions} />
           </div>
         )}
+
+        {tab === "profile" && (() => {
+          const lvl = levelInfo(game.xp);
+          const quests = [
+            { label: "Review 20 cards", cur: game.daily.reviewed, target: 20 },
+            { label: "Finish a quiz", cur: game.daily.quizzes, target: 1 },
+            { label: "Practice a module", cur: game.daily.modules, target: 1 },
+          ];
+          const allDone = quests.every((q) => q.cur >= q.target);
+          const days = Array.from({ length: 70 }, (_, k) => new Date(Date.now() - (69 - k) * 86400000).toISOString().slice(0, 10));
+          const maxH = Math.max(1, ...days.map((d) => game.history[d] || 0));
+          const heatCol = (n) => n === 0 ? "bg-stone-200" : n >= maxH * 0.66 ? "bg-teal-600" : n >= maxH * 0.33 ? "bg-teal-400" : "bg-teal-200";
+          const unlocked = ACHIEVEMENTS.filter((a) => game.achievements[a.id]).length;
+          return (
+            <div className="space-y-5">
+              <h1 className="text-2xl font-bold tracking-tight"><span className="font-serif italic text-teal-700">Profile</span></h1>
+              <XpStrip game={game} onProfile={() => {}} />
+
+              <div className="grid grid-cols-3 gap-2.5">
+                <div className="rounded-2xl border border-stone-200 bg-white p-3 text-center"><div className="text-2xl font-bold text-orange-500">🔥 {streakCount}</div><div className="text-[11px] text-stone-400 mt-0.5">streak · best {game.longestStreak}</div></div>
+                <div className="rounded-2xl border border-stone-200 bg-white p-3 text-center"><div className="text-2xl font-bold text-teal-600">{game.stats.reviews}</div><div className="text-[11px] text-stone-400 mt-0.5">reviews</div></div>
+                <div className="rounded-2xl border border-stone-200 bg-white p-3 text-center"><div className="text-2xl font-bold text-stone-700">{unlocked}/{ACHIEVEMENTS.length}</div><div className="text-[11px] text-stone-400 mt-0.5">trophies</div></div>
+              </div>
+
+              {/* daily quests */}
+              <div>
+                <div className="flex items-center gap-2 mb-2.5"><span className="text-xs font-semibold uppercase tracking-wide text-stone-400">Daily quests</span><div className="h-px flex-1 bg-stone-200" /></div>
+                <div className="rounded-2xl border border-stone-200 bg-white p-4 space-y-3">
+                  {quests.map((q) => (
+                    <div key={q.label}>
+                      <div className="flex justify-between text-xs mb-1"><span className={q.cur >= q.target ? "text-teal-700 font-medium" : "text-stone-600"}>{q.cur >= q.target ? "✓ " : ""}{q.label}</span><span className="text-stone-400">{Math.min(q.cur, q.target)}/{q.target}</span></div>
+                      <div className="h-2 rounded-full bg-stone-200 overflow-hidden"><div className="h-full bg-teal-500 transition-all" style={{ width: `${Math.min(100, (q.cur / q.target) * 100)}%` }} /></div>
+                    </div>
+                  ))}
+                  <button disabled={!allDone || game.daily.claimed}
+                    onClick={() => { commit((d) => ({ ...d, game: { ...d.game, coins: d.game.coins + 50, xp: d.game.xp + 30, daily: { ...d.game.daily, claimed: true } } })); setCelebrate((c) => [...c, { kind: "achievement", a: { name: "Daily goals complete!", desc: "+50 coins, +30 XP", icon: "✅", tier: "gold", xp: 30, coins: 50 } }]); if (game.sound) playSfx("levelup"); }}
+                    className="w-full rounded-xl bg-teal-600 text-white py-2.5 text-sm font-semibold hover:bg-teal-700 disabled:opacity-40 disabled:bg-stone-300">
+                    {game.daily.claimed ? "Claimed today ✓" : allDone ? "Claim 50 🪙 + 30 XP" : "Complete all quests to claim"}
+                  </button>
+                </div>
+              </div>
+
+              {/* trophy case */}
+              <div>
+                <div className="flex items-center gap-2 mb-2.5"><span className="text-xs font-semibold uppercase tracking-wide text-stone-400">Trophy case</span><div className="h-px flex-1 bg-stone-200" /></div>
+                <div className="grid grid-cols-2 gap-2.5">
+                  {ACHIEVEMENTS.map((a) => {
+                    const got = game.achievements[a.id];
+                    return (
+                      <div key={a.id} className={`rounded-xl border p-3 flex items-center gap-2.5 ${got ? "bg-white border-stone-200" : "bg-stone-50 border-stone-200 opacity-60"}`}>
+                        <div className={`shrink-0 w-9 h-9 rounded-xl flex items-center justify-center text-lg ${got ? "" : "grayscale"}`}>{got ? a.icon : "🔒"}</div>
+                        <div className="min-w-0"><div className="text-sm font-semibold text-stone-800 truncate">{a.name}</div><div className="text-[11px] text-stone-400 leading-tight">{a.desc}</div></div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* activity heatmap */}
+              <div>
+                <div className="flex items-center gap-2 mb-2.5"><span className="text-xs font-semibold uppercase tracking-wide text-stone-400">Activity · last 10 weeks</span><div className="h-px flex-1 bg-stone-200" /></div>
+                <div className="rounded-2xl border border-stone-200 bg-white p-3">
+                  <div className="grid grid-rows-7 grid-flow-col gap-1 w-max">
+                    {days.map((d) => <div key={d} title={`${d}: ${game.history[d] || 0} reviews`} className={`w-3.5 h-3.5 rounded-sm ${heatCol(game.history[d] || 0)}`} />)}
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
       </div>
 
       {/* ─── BOTTOM NAV ─── */}
@@ -4125,6 +4405,7 @@ export default function App() {
             { id: "study",    icon: Brain,        label: "Study",    badge: dueTotal > 0 ? dueTotal : null },
             { id: "practice", icon: Target,       label: "Practice", badge: null },
             { id: "tutor",    icon: MessageCircle, label: "Tutor",    badge: null },
+            { id: "profile",  icon: Trophy,       label: "Profile",  badge: null },
             { id: "manage",   icon: Settings,     label: "Manage",   badge: null },
           ].map(({ id, icon: Icon, label, badge }) => (
             <button key={id} onClick={() => setTab(id)}
