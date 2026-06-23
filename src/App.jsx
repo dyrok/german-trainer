@@ -1458,12 +1458,14 @@ function AddCards({ onAdd }) {
 
 /* ═══════════════════════════ BROWSE ═══════════════════════════ */
 
-function Browse({ cards, settings, onDelete, onSettings, onReset, onResetAll, subjectLabel = "this subject" }) {
+function Browse({ cards, settings, onDelete, onEdit, onSettings, onReset, onResetAll, subjectLabel = "this subject" }) {
   const [q, setQ] = useState("");
   const [confirmReset, setConfirmReset] = useState(false);
   const [confirmResetAll, setConfirmResetAll] = useState(false);
   const [apiKey, setApiKey] = useState(loadGroqKey);
   const [model, setModel]   = useState(loadGroqModel);
+  const [editingId, setEditingId] = useState(null);
+  const [draft, setDraft]   = useState({ front: "", back: "" });
   const now = Date.now();
 
   const filtered = cards
@@ -1520,14 +1522,34 @@ function Browse({ cards, settings, onDelete, onSettings, onReset, onResetAll, su
             c.state === "new"   ? ["new",  "text-teal-500"] :
             c.due <= now        ? ["due",  "text-orange-500"] :
                                   [relTime(c.due), "text-stone-400"];
+          const editing = editingId === c.id;
           return (
-            <div key={c.id} className="rounded-xl border border-stone-200 bg-white px-3 py-2 flex items-center gap-3">
-              <div className="flex-1 min-w-0">
-                <div className="text-sm font-medium text-stone-800 truncate">{c.front}</div>
-                <div className="text-xs text-stone-400 truncate">{c.back} · <span className="text-stone-300">{c.deck}</span></div>
-              </div>
-              <span className={`text-[11px] shrink-0 ${badge[1]}`}>{badge[0]}</span>
-              <button onClick={() => onDelete(c.id)} className="text-stone-300 hover:text-rose-500 shrink-0"><Trash2 size={14}/></button>
+            <div key={c.id} className="rounded-xl border border-stone-200 bg-white px-3 py-2">
+              {editing ? (
+                <div className="space-y-2">
+                  <input value={draft.front} onChange={(e) => setDraft((d) => ({ ...d, front: e.target.value }))} placeholder="Front"
+                    className="w-full rounded-lg border border-stone-200 px-2 py-1 text-sm focus:outline-none focus:border-teal-400" />
+                  <input value={draft.back} onChange={(e) => setDraft((d) => ({ ...d, back: e.target.value }))} placeholder="Back"
+                    className="w-full rounded-lg border border-stone-200 px-2 py-1 text-sm focus:outline-none focus:border-teal-400" />
+                  <div className="flex gap-2 justify-end">
+                    <Btn onClick={() => setEditingId(null)}>Cancel</Btn>
+                    <Btn kind="primary" disabled={!draft.front.trim() || !draft.back.trim()}
+                      onClick={() => { onEdit(c.id, { front: draft.front.trim(), back: draft.back.trim() }); setEditingId(null); }}>
+                      <Check size={14} /> Save
+                    </Btn>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-stone-800 truncate">{c.front}</div>
+                    <div className="text-xs text-stone-400 truncate">{c.back} · <span className="text-stone-300">{c.deck}</span></div>
+                  </div>
+                  <span className={`text-[11px] shrink-0 ${badge[1]}`}>{badge[0]}</span>
+                  <button onClick={() => { setEditingId(c.id); setDraft({ front: c.front, back: c.back }); }} className="text-stone-300 hover:text-teal-500 shrink-0"><Pencil size={13}/></button>
+                  <button onClick={() => onDelete(c.id)} className="text-stone-300 hover:text-rose-500 shrink-0"><Trash2 size={14}/></button>
+                </div>
+              )}
             </div>
           );
         })}
@@ -2285,6 +2307,7 @@ export default function App() {
                 cards={cards}
                 settings={settings}
                 onDelete={(id) => commit((d) => ({ ...d, cards: d.cards.filter((c) => c.id !== id) }))}
+                onEdit={(id, fields) => commit((d) => ({ ...d, cards: d.cards.map((c) => c.id === id ? { ...c, ...fields } : c) }))}
                 onSettings={(v) => commit((d) => ({ ...d, settings: { ...d.settings, newPerDay: v } }))}
                 onReset={() => commit((d) => ({
                   ...d,
