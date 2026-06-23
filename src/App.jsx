@@ -695,6 +695,15 @@ function TranslatePanel({ t }) {
 /* ═══════════════════════════ MARKDOWN ═══════════════════════════ */
 
 // Inline markdown: `code`, **bold**, *italic* / _italic_. Returns React nodes.
+// Normalize LaTeX delimiters: many models emit \[ \] (display) and \( \) (inline)
+// instead of $$ $$ / $ $. Convert them so KaTeX picks them up.
+function normalizeMath(s) {
+  // Lookbehind avoids touching \\[..] row-breaks inside aligned/array blocks.
+  return String(s || "")
+    .replace(/(?<!\\)\\\[|(?<!\\)\\\]/g, "$$$$") // \[ \]  -> $$
+    .replace(/(?<!\\)\\\(|(?<!\\)\\\)/g, "$$");  // \( \)  -> $
+}
+
 function mdInline(text, kp) {
   const out = [];
   // math ($$..$$ / $..$ / \(..\)) is matched first so KaTeX renders it
@@ -719,13 +728,16 @@ function mdInline(text, kp) {
 // bullet/ordered lists, and fenced code blocks.
 // KaTeX renderers (math for the Aptitude subject).
 function Latex({ tex, block }) {
+  // Escape stray # / % (KaTeX-special: macro-param & comment) that models often
+  // leave unescaped inside \text{...}; we never define macros, so this is safe.
+  const t = String(tex).replace(/(?<!\\)[#%]/g, (c) => "\\" + c);
   let html = "";
-  try { html = katex.renderToString(String(tex), { displayMode: !!block, throwOnError: false }); } catch { html = String(tex); }
+  try { html = katex.renderToString(t, { displayMode: !!block, throwOnError: false }); } catch { html = String(tex); }
   return <span className={block ? "block my-1 overflow-x-auto" : ""} dangerouslySetInnerHTML={{ __html: html }} />;
 }
 // Mixed prose + inline ($...$) / block ($$...$$) math, with \n as line breaks.
 function MathText({ text, className = "" }) {
-  const lines = String(text || "").split("\n");
+  const lines = normalizeMath(text).split("\n");
   return (
     <div className={className}>
       {lines.map((line, li) => {
@@ -744,7 +756,7 @@ function MathText({ text, className = "" }) {
 }
 
 function Markdown({ text, className = "" }) {
-  const lines = String(text || "").split("\n");
+  const lines = normalizeMath(text).split("\n");
   const blocks = [];
   let i = 0;
   const isItem = (l) => /^\s*([-*+]|\d+\.)\s+/.test(l);
@@ -759,6 +771,7 @@ function Markdown({ text, className = "" }) {
     }
     const h = line.match(/^(#{1,6})\s+(.*)$/);
     if (h) { blocks.push(<div key={blocks.length} className="font-semibold mt-1.5 mb-0.5">{mdInline(h[2], blocks.length + "-")}</div>); i++; continue; }
+    if (/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) { blocks.push(<hr key={blocks.length} className="my-2 border-stone-200" />); i++; continue; }
     if (isItem(line)) {
       const ordered = /^\s*\d+\./.test(line); const items = [];
       while (i < lines.length && isItem(lines[i])) {
