@@ -330,6 +330,49 @@ const REACT_MODULE_CARDS = [
   ["Deployment", "What is Continuous Deployment on Netlify/Vercel?", "Connecting your Git repo so every push triggers an automatic rebuild and redeploy of the site."],
 ];
 
+/* ─── React flashcards from the professor's notes (links provided in class) ─── */
+const REACT_PROF_CARDS = [
+  // Imperative vs Declarative
+  ["Imperative vs Declarative", "What does imperative coding focus on?", "The step-by-step HOW — you explicitly tell the machine each step (e.g. createElement, textContent, appendChild)."],
+  ["Imperative vs Declarative", "What does declarative coding focus on?", "The WHAT / the result you want; the framework handles the implementation. React is declarative — you describe the UI and React updates the DOM."],
+  ["Imperative vs Declarative", "Prof's food analogy for the two paradigms?", "Imperative = a recipe's steps ('heat pan, add oil, wait 30s'); declarative = ordering the result ('grilled chicken, medium, with fries')."],
+  // useState
+  ["Prof · useState", "Why can't a plain JS variable hold React state?", "Plain variables don't trigger a re-render. Only updating state via its setter makes React re-render and show the change."],
+  ["Prof · useState", "Why doesn't a const state variable cause an assignment error?", "The setter never mutates the variable — it schedules a future update. React re-runs the component with a fresh value in a new scope."],
+  ["Prof · useState", "What is the state value during one render?", "A read-only, frozen snapshot for that render. The setter dispatches a new value for the next render."],
+  ["Prof · useState", "How are useState's value and setter named?", "By array destructuring on index position ([value, setter]), so you can name them anything; multiple useState calls stay independent."],
+  // useEffect
+  ["Prof · useEffect", "What is useEffect's primary purpose?", "To safely run side effects (API calls, timers, DOM work) after the component renders and the DOM updates."],
+  ["Prof · useEffect", "What does no dependency array (undefined) do?", "The effect runs after every render — which can cause performance issues or infinite loops."],
+  ["Prof · useEffect", "What does a populated dependency array do?", "The effect runs on mount and re-runs only when one of the listed dependencies changes value."],
+  ["Prof · useEffect", "What is the returned cleanup function for?", "React runs it before the next effect and on unmount — to remove listeners, cancel timers, and prevent memory leaks."],
+  // useRef
+  ["Prof · useRef", "What are useRef's two main roles?", "Direct DOM access for imperative tasks, and storing mutable data that persists across renders without triggering a re-render."],
+  ["Prof · useRef", "How does useRef differ from useState on re-rendering?", "Changing a ref's .current does NOT cause a re-render; changing state always does."],
+  ["Prof · useRef", "What does ref.current hold?", "Either the initial value you passed, or the actual DOM node once the ref is bound to a JSX element."],
+  ["Prof · useRef", "Good use cases for useRef?", "Focus control, smooth scrolling, storing timer IDs, integrating DOM libraries, and caching previous values for comparison."],
+  // useCallback
+  ["Prof · useCallback", "Why are functions recreated each render, and why does it matter?", "Every re-render redefines inner functions; a child sees a 'new' function prop each time, causing unnecessary re-renders."],
+  ["Prof · useCallback", "What does useCallback do?", "Memoizes a function so its reference stays stable across renders unless its dependencies change."],
+  ["Prof · useCallback", "What must you pair useCallback with to actually prevent child re-renders?", "React.memo on the child — so it skips rendering when props (including the memoized function) are unchanged."],
+  // useReducer
+  ["Prof · useReducer", "What is useReducer and when is it used?", "The 'Manager' hook for complex state — when the next state depends on the previous, or multiple related values change together."],
+  ["Prof · useReducer", "How does useReducer organize update logic?", "All update logic lives in one pure reducer(state, action) function; the component just dispatches actions ({type, payload})."],
+  ["Prof · useReducer", "What does useReducer return?", "[state, dispatch] = useReducer(reducer, initialState)."],
+  ["Prof · useReducer", "Prof's kitchen analogy?", "useState is a waiter who also cooks (fine for a small menu); useReducer is a professional kitchen — logic is separated from the UI."],
+  // State vs Props
+  ["Prof · State vs Props", "What is state (personal memory)?", "A component's local, changeable data; when it updates, React automatically re-renders to show the new data."],
+  ["Prof · State vs Props", "How do props differ from state?", "Props are configuration passed parent→child and are read-only; state is managed locally inside a component and is changeable."],
+  ["Prof · State vs Props", "Common parent/child pattern?", "The parent holds the state and passes it down to the child as a prop; only the parent can update its own state."],
+  // ESLint
+  ["Prof · ESLint", "What is ESLint?", "A code-quality checker — a 'grammar checker for code' that scans JS for errors, bad practices, and inconsistencies, running on build."],
+  ["Prof · ESLint", "ESLint's four error categories?", "Syntax errors, bad practices (unused variables), style issues (naming/spacing), and potential bugs (e.g. == instead of ===)."],
+  ["Prof · ESLint", "Why does React warn about mixed exports (only-export-components)?", "Don't export a component and non-components from the same file (breaks Fast Refresh); split constants/helpers into separate files."],
+  ["Prof · ESLint", "How to avoid a setState-in-useEffect cascade when reading localStorage?", "Don't setState in an empty-deps effect (infinite loop); use lazy initialization: useState(() => JSON.parse(localStorage.getItem(k)) || [])."],
+  // Fragments (link was dead; standard fact)
+  ["Components", "What is a React Fragment and why use it?", "<>...</> (or <React.Fragment>) groups multiple children without adding an extra DOM node — return several elements without a wrapper div."],
+];
+
 /* ═══════════════════════════ PURE HELPERS ═══════════════════════════ */
 
 function shuffle(arr) {
@@ -533,7 +576,9 @@ function seedReactCards() {
     newCard(item.q, item.o[LETTER_IDX[item.c]], "React Basics", null, "r" + i, "react"));
   const modules = REACT_MODULE_CARDS.map(([deck, q, a], i) =>
     newCard(q, a, "React · " + deck, null, "rm" + i, "react"));
-  return [...basics, ...modules];
+  const prof = REACT_PROF_CARDS.map(([deck, q, a], i) =>
+    newCard(q, a, "React · " + deck, null, "rp" + i, "react"));
+  return [...basics, ...modules, ...prof];
 }
 
 function seedAll() { return [...seedCards(), ...seedReactCards()]; }
