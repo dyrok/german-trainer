@@ -1113,7 +1113,7 @@ function Exam({ make, sectioned, onReview, subjectLabel = "this subject", timeLi
 
 /* ═══════════════════════════ SRS SESSION ═══════════════════════════ */
 
-function SRSSession({ cards, maxNew = 20, cram = false, studyAll = false, initialQueue = null, initialDone = 0, onRate, onEnd, onProgress, onEditCard, subjectLabel = "this subject" }) {
+function SRSSession({ cards, maxNew = 20, cram = false, studyAll = false, initialQueue = null, initialDone = 0, onRate, onEnd, onProgress, onEditCard, onUndo, subjectLabel = "this subject" }) {
   function buildQueue() {
     if (initialQueue) return initialQueue.filter((id) => cards.some((c) => c.id === id));
     if (cram || studyAll) return shuffle(cards.map((c) => c.id));
@@ -1126,6 +1126,7 @@ function SRSSession({ cards, maxNew = 20, cram = false, studyAll = false, initia
   const [queue,   setQueue]   = useState(buildQueue);
   const [flipped, setFlipped] = useState(false);
   const [done,    setDone]    = useState(initialDone);
+  const [lastAction, setLastAction] = useState(null); // snapshot for undo
 
   // report progress so the session can be saved/resumed
   useEffect(() => { onProgress && onProgress(queue, done, cram); }, [queue, done]);
@@ -1134,6 +1135,7 @@ function SRSSession({ cards, maxNew = 20, cram = false, studyAll = false, initia
 
   useEffect(() => {
     function onKey(e) {
+      if ((e.key === "u" || e.key === "U" || ((e.metaKey || e.ctrlKey) && e.key === "z")) && lastAction) { e.preventDefault(); undo(); return; }
       if (!card) return;
       if (!flipped) {
         if (e.key === " " || e.key === "Enter") { e.preventDefault(); setFlipped(true); }
@@ -1144,9 +1146,11 @@ function SRSSession({ cards, maxNew = 20, cram = false, studyAll = false, initia
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [card, flipped, queue]);
+  }, [card, flipped, queue, lastAction]);
 
   function rate(r) {
+    // snapshot the pre-rating state so it can be undone (Anki-style)
+    setLastAction({ prevCard: card, wasNew: card.state === "new", prevQueue: queue, prevDone: done });
     onRate(card, r, cram);
     setDone((d) => d + 1);
     setFlipped(false);
@@ -1157,13 +1161,25 @@ function SRSSession({ cards, maxNew = 20, cram = false, studyAll = false, initia
     });
   }
 
+  function undo() {
+    if (!lastAction) return;
+    onUndo && onUndo(lastAction.prevCard, lastAction.wasNew); // restore card scheduling + daily count
+    setQueue(lastAction.prevQueue);
+    setDone(lastAction.prevDone);
+    setFlipped(true);
+    setLastAction(null);
+  }
+
   if (!card) {
     return (
       <div className="text-center py-10">
         <div className="text-5xl mb-2">🎉</div>
         <div className="text-3xl font-bold text-stone-800">{done}</div>
         <p className="text-stone-500 mt-1">{cram ? "cards practiced" : "reviews complete"}</p>
-        <div className="mt-6"><Btn kind="primary" onClick={onEnd}>Done</Btn></div>
+        <div className="mt-6 flex gap-2.5 justify-center">
+          {lastAction && <Btn onClick={undo}><RotateCcw size={15} /> Undo last</Btn>}
+          <Btn kind="primary" onClick={onEnd}>Done</Btn>
+        </div>
       </div>
     );
   }
@@ -1178,7 +1194,14 @@ function SRSSession({ cards, maxNew = 20, cram = false, studyAll = false, initia
           <span className={`rounded-full px-2 py-0.5 font-medium text-[11px] ${stateBadge[state] || ""}`}>{state}</span>
           <span className="text-stone-300">{card.deck}</span>
         </div>
-        <span>{done} done · {queue.length} left</span>
+        <div className="flex items-center gap-2.5">
+          {lastAction && (
+            <button onClick={undo} title="Undo last rating (U)" className="inline-flex items-center gap-1 text-stone-400 hover:text-teal-600 transition-colors">
+              <RotateCcw size={12} /> Undo
+            </button>
+          )}
+          <span>{done} done · {queue.length} left</span>
+        </div>
       </div>
       <Bar value={done} max={done + queue.length} />
 
@@ -1225,7 +1248,7 @@ function SRSSession({ cards, maxNew = 20, cram = false, studyAll = false, initia
       )}
 
       <Keys items={flipped
-        ? [["1","again"],["2","hard"],["3","good"],["4","easy"],["Esc","end"]]
+        ? [["1","again"],["2","hard"],["3","good"],["4","easy"],["U","undo"],["Esc","end"]]
         : [["Space","reveal"],["Esc","end"]]} />
     </div>
   );
@@ -1366,10 +1389,20 @@ function FlipDrill({ deck, quizMake, onBack }) {
 function ModuleOverview({ cards, subjectLabel = "this subject", onEdit, onDelete }) {
   const [editId, setEditId] = useState(null);
   const [draft, setDraft]   = useState({ front: "", back: "" });
+  const [q, setQ]           = useState("");
+  const shown = cards.filter((c) => !q || (c.front + " " + c.back).toLowerCase().includes(q.toLowerCase()));
 
   return (
-    <div className="grid grid-cols-2 gap-2">
-      {cards.map((c) => {
+    <div className="space-y-2">
+      {cards.length > 6 && (
+        <div className="relative">
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-stone-300" />
+          <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={`Search ${cards.length} cards…`}
+            className="w-full rounded-xl border border-stone-200 px-9 py-2 text-sm focus:outline-none focus:border-teal-400" />
+        </div>
+      )}
+      <div className="grid grid-cols-2 gap-2">
+      {shown.map((c) => {
         const editing = editId === c.id;
         if (editing) {
           return (
@@ -1400,6 +1433,8 @@ function ModuleOverview({ cards, subjectLabel = "this subject", onEdit, onDelete
           </button>
         );
       })}
+      </div>
+      {shown.length === 0 && <div className="text-center text-sm text-stone-400 py-4">No cards match.</div>}
     </div>
   );
 }
@@ -2858,6 +2893,11 @@ export default function App() {
               commit((d) => ({ ...d, session: queue.length ? { subject, cram, deck: session.deck || null, queue, done } : null }));
             }}
             onEditCard={(id, fields) => commit((d) => ({ ...d, cards: d.cards.map((c) => c.id === id ? { ...c, ...fields } : c) }))}
+            onUndo={(prevCard, wasNew) => commit((d) => ({
+              ...d,
+              cards: d.cards.map((c) => c.id === prevCard.id ? prevCard : c),
+              daily: wasNew ? { ...d.daily, newDone: Math.max(0, d.daily.newDone - 1) } : d.daily,
+            }))}
             onEnd={() => setSession(null)}
           />
           </div>
