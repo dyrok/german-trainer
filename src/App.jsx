@@ -1446,6 +1446,22 @@ async function callAI(notes, apiKey) {
   return arr.filter((x) => x.front && x.back).map((x) => ({ front: String(x.front), back: String(x.back) }));
 }
 
+// Auto-assign each card to a module/deck. Returns the cards with a .deck field set.
+async function categorizeCards(cards, existingDecks, subjectLabel, apiKey) {
+  const list = cards.map((c, i) => `${i}: ${c.front} => ${c.back}`).join("\n");
+  const txt = await groqChat(
+    [{ role: "user", content:
+      `Group these ${subjectLabel} flashcards into modules. Prefer reusing an existing module when it fits; otherwise invent a short, clear module name (2-4 words).\n` +
+      `Existing modules: ${existingDecks.length ? existingDecks.join(", ") : "(none yet)"}\n` +
+      `Return ONLY JSON {"decks":["module for card 0","module for card 1", ...]} — one module name per card, in the same order. No markdown.\n\nCARDS:\n${list}`
+    }],
+    { key: apiKey, json: true, temperature: 0.2, max_tokens: 1024 },
+  );
+  const parsed = JSON.parse(stripFences(txt));
+  const decks = Array.isArray(parsed) ? parsed : (parsed.decks || []);
+  return cards.map((c, i) => ({ ...c, deck: decks[i] ? String(decks[i]).slice(0, 40) : undefined }));
+}
+
 // Topic/notes → MCQ quiz (for the AI quiz generator). Returns Exam-format questions.
 async function callAIQuiz(topic, apiKey, n = 8) {
   const txt = await groqChat(
@@ -1485,21 +1501,40 @@ async function explainAnswer({ prompt, options, answer, picked }, subjectLabel) 
   );
 }
 
-function AddCards({ onAdd }) {
+function AddCards({ onAdd, decks = [], subjectLabel = "this subject" }) {
   const [tab,     setTab]     = useState("paste");
-  const [deck,    setDeck]    = useState("My Notes");
+  const [deck,    setDeck]    = useState(decks[0] || "My Notes");
+  const [newDeck, setNewDeck] = useState("");
+  const [creatingDeck, setCreatingDeck] = useState(decks.length === 0);
+  const [autoCat, setAutoCat] = useState(false);
   const [front,   setFront]   = useState("");
   const [back,    setBack]    = useState("");
   const [bulk,    setBulk]    = useState("");
   const [notes,   setNotes]   = useState("");
   const [aiCards, setAiCards] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [adding,  setAdding]  = useState(false);
   const [err,     setErr]     = useState("");
   const [apiKey,  setApiKey]  = useState(loadGroqKey);
 
   const parsed = parsePaste(bulk);
+  const deckValue = (creatingDeck ? newDeck.trim() : deck) || "My Notes";
 
   function updateKey(k) { setApiKey(k); saveGroqKey(k.trim()); }
+
+  // Shared add path: optionally AI-categorize into modules, then hand off.
+  async function doAdd(list, after) {
+    if (!list.length) return;
+    if (autoCat) {
+      if (!apiKey.trim()) { setErr("Add your Groq key to auto-categorize."); return; }
+      setErr(""); setAdding(true);
+      try { list = await categorizeCards(list, decks, subjectLabel, apiKey.trim()); }
+      catch (e) { setErr("Auto-categorize failed: " + (e?.message || "error")); setAdding(false); return; }
+      setAdding(false);
+    }
+    onAdd(list, deckValue);
+    after && after();
+  }
 
   async function generate() {
     if (!notes.trim()) return;
@@ -1517,9 +1552,35 @@ function AddCards({ onAdd }) {
   return (
     <div className="space-y-4">
       <div>
-        <label className="block text-xs text-stone-400 mb-1">Deck name</label>
-        <input value={deck} onChange={(e) => setDeck(e.target.value)} maxLength={40}
-          className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
+        <label className="block text-xs text-stone-400 mb-1">Module / deck</label>
+        {autoCat ? (
+          <div className="rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs text-sky-700 inline-flex items-center gap-1.5">
+            <Sparkles size={13} /> AI will sort each card into the best module
+          </div>
+        ) : creatingDeck ? (
+          <div className="flex gap-2">
+            <input value={newDeck} onChange={(e) => setNewDeck(e.target.value)} maxLength={40} placeholder="New module name"
+              className="flex-1 rounded-xl border border-stone-200 px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
+            {decks.length > 0 && (
+              <button onClick={() => setCreatingDeck(false)} className="shrink-0 rounded-xl border border-stone-200 px-3 text-sm text-stone-500 hover:bg-stone-50">Pick existing</button>
+            )}
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <select value={deck} onChange={(e) => setDeck(e.target.value)}
+                className="w-full appearance-none rounded-xl border border-stone-200 bg-white px-3 py-2 pr-8 text-sm focus:outline-none focus:border-teal-400">
+                {decks.map((d) => <option key={d} value={d}>{d}</option>)}
+              </select>
+              <ChevronDown size={15} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400" />
+            </div>
+            <button onClick={() => { setCreatingDeck(true); setNewDeck(""); }} className="shrink-0 inline-flex items-center gap-1 rounded-xl border border-stone-200 px-3 text-sm text-teal-700 hover:bg-stone-50"><Plus size={14} /> New</button>
+          </div>
+        )}
+        <label className="mt-2 flex items-center gap-2 text-xs text-stone-500 cursor-pointer">
+          <input type="checkbox" checked={autoCat} onChange={(e) => setAutoCat(e.target.checked)} className="accent-teal-600" />
+          <Wand2 size={12} className="text-sky-500" /> AI auto-categorize into modules
+        </label>
       </div>
 
       <div className="inline-flex rounded-xl bg-stone-200 p-1 text-sm">
@@ -1538,8 +1599,8 @@ function AddCards({ onAdd }) {
             className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm font-mono focus:outline-none focus:border-teal-400" />
           <div className="mt-2 flex items-center justify-between">
             <span className="text-xs text-stone-400">{parsed.length} card(s)</span>
-            <Btn kind="primary" disabled={!parsed.length} onClick={() => { onAdd(parsed, deck); setBulk(""); }}>
-              <Plus size={15} /> Add {parsed.length}
+            <Btn kind="primary" disabled={!parsed.length || adding} onClick={() => doAdd(parsed, () => setBulk(""))}>
+              {adding ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />} {adding ? "Sorting…" : "Add " + parsed.length}
             </Btn>
           </div>
         </div>
@@ -1580,8 +1641,8 @@ function AddCards({ onAdd }) {
                 ))}
               </div>
               <div className="mt-3 flex gap-2">
-                <Btn kind="primary" onClick={() => { onAdd(aiCards, deck); setAiCards([]); setNotes(""); }}>
-                  <Plus size={15} /> Add all {aiCards.length}
+                <Btn kind="primary" disabled={adding} onClick={() => doAdd(aiCards, () => { setAiCards([]); setNotes(""); })}>
+                  {adding ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />} {adding ? "Sorting…" : "Add all " + aiCards.length}
                 </Btn>
                 <Btn onClick={() => setAiCards([])}>Discard</Btn>
               </div>
@@ -1602,9 +1663,10 @@ function AddCards({ onAdd }) {
             <textarea value={back} onChange={(e) => setBack(e.target.value)} rows={2}
               className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm focus:outline-none focus:border-teal-400" />
           </div>
-          <Btn kind="primary" disabled={!front.trim() || !back.trim()}
-            onClick={() => { onAdd([{ front: front.trim(), back: back.trim() }], deck); setFront(""); setBack(""); }}>
-            <Plus size={15} /> Add card
+          {err && <div className="flex items-center gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2"><AlertCircle size={13}/>{err}</div>}
+          <Btn kind="primary" disabled={!front.trim() || !back.trim() || adding}
+            onClick={() => doAdd([{ front: front.trim(), back: back.trim() }], () => { setFront(""); setBack(""); })}>
+            {adding ? <Loader2 size={15} className="animate-spin" /> : <Plus size={15} />} {adding ? "Sorting…" : "Add card"}
           </Btn>
         </div>
       )}
@@ -2206,9 +2268,10 @@ export default function App() {
 
   function addCards(list, deck) {
     const subj = (data && data.subject) || "german";
-    const created = list.map((c) => newCard(c.front, c.back, deck, null, undefined, subj));
+    const created = list.map((c) => newCard(c.front, c.back, c.deck || deck, null, undefined, subj));
     commit((d) => ({ ...d, cards: [...d.cards, ...created] }));
-    showFlash("Added " + created.length + " card(s) to '" + deck + "'" );
+    const decksUsed = [...new Set(created.map((c) => c.deck))];
+    showFlash("Added " + created.length + " card(s)" + (decksUsed.length === 1 ? " to '" + decksUsed[0] + "'" : " across " + decksUsed.length + " modules"));
   }
 
   // global Escape key
@@ -2236,6 +2299,9 @@ export default function App() {
   const subject = data.subject || "german";
   const subjMeta = SUBJECTS[subject] || SUBJECTS.german;
   const cards = data.cards.filter((c) => (c.subject || "german") === subject);
+  // decks (modules) present in this subject, with counts, sorted
+  const deckCounts = cards.reduce((m, c) => { m[c.deck] = (m[c.deck] || 0) + 1; return m; }, {});
+  const subjectDecks = Object.keys(deckCounts).sort();
   const now = Date.now();
   const reviewDue = cards.filter((c) => c.state !== "new" && c.due <= now).length;
   const newAvail  = Math.min(
@@ -2359,6 +2425,14 @@ export default function App() {
     else if (subview === "reactquiz") { title = "React Quiz"; content = <Exam make={() => makeReactQuiz(15)} subjectLabel="React" onAddMissed={addMissed} />; }
     else if (subview === "aiquiz")    { title = "AI Quiz Generator"; content = <AIQuizMaker subjectLabel={subjMeta.label} onAddMissed={addMissed} />; }
     else if (subview === "timed")     { title = "Timed Sprint"; content = <TimedQuiz subject={subject} subjectLabel={subjMeta.label} onAddMissed={addMissed} />; }
+    else if (subview.startsWith("cards:")) {
+      const dname = subview.slice(6);
+      title = dname.replace(/^React · /, "");
+      const deckCards = cards.filter((c) => c.deck === dname).map((c) => ({ en: c.front, de: c.back, note: c.note }));
+      content = deckCards.length
+        ? <FlipDrill deck={deckCards} />
+        : <div className="text-sm text-stone-400">This module is empty.</div>;
+    }
     else if (subview === "agentquiz") { title = "AI Quiz"; content = agentQuiz && agentQuiz.length
       ? <Exam make={() => agentQuiz} subjectLabel={subjMeta.label} onAddMissed={addMissed} />
       : <div className="text-sm text-stone-400">No quiz to show.</div>; }
@@ -2531,8 +2605,21 @@ export default function App() {
                 <Tile label="AI Quiz" sub="generate from a topic" icon={Wand2} onClick={() => setSubview("aiquiz")} />
               </div>
             </div>
+
+            <div>
+              <div className="flex items-center gap-2 mb-2.5">
+                <span className="text-xs font-semibold uppercase tracking-wide text-stone-400">Flashcard modules</span>
+                <div className="h-px flex-1 bg-stone-200" />
+              </div>
+              <div className="grid grid-cols-2 gap-2.5">
+                {subjectDecks.map((d) => (
+                  <Tile key={d} label={d.replace(/^React · /, "")} sub={`${deckCounts[d]} card${deckCounts[d] !== 1 ? "s" : ""}`} icon={Layers} onClick={() => setSubview("cards:" + d)} />
+                ))}
+              </div>
+            </div>
+
             <div className="rounded-xl bg-stone-50 border border-stone-200 p-3 text-xs text-stone-500 leading-relaxed">
-              After answering any question, tap <span className="font-semibold text-stone-700">Explain with AI</span> for a Groq-powered breakdown. Set your key in Manage → AI settings.
+              Open any module to flip through its cards or take a deck quiz. After answering a quiz question, tap <span className="font-semibold text-stone-700">Explain with AI</span> for a breakdown.
             </div>
           </div>
         )}
@@ -2559,12 +2646,12 @@ export default function App() {
 
             <div>
               <div className="flex items-center gap-2 mb-2.5">
-                <span className="text-xs font-semibold uppercase tracking-wide text-stone-400">Vocabulary decks</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-stone-400">Flashcard modules</span>
                 <div className="h-px flex-1 bg-stone-200" />
               </div>
               <div className="grid grid-cols-2 gap-2.5">
-                {DECK_TILES.map((t) => (
-                  <Tile key={t.id} label={t.label} sub={t.sub} icon={t.icon} onClick={() => setSubview("deck:" + t.deck)} />
+                {subjectDecks.map((d) => (
+                  <Tile key={d} label={d} sub={`${deckCounts[d]} card${deckCounts[d] !== 1 ? "s" : ""}`} icon={Layers} onClick={() => setSubview("cards:" + d)} />
                 ))}
               </div>
             </div>
@@ -2602,7 +2689,7 @@ export default function App() {
                 <span className="text-xs font-semibold uppercase tracking-wide text-stone-400">Add cards</span>
                 <div className="h-px flex-1 bg-stone-200" />
               </div>
-              <AddCards onAdd={addCards} />
+              <AddCards onAdd={addCards} decks={subjectDecks} subjectLabel={subjMeta.label} />
             </div>
             <div>
               <div className="flex items-center gap-2 mb-3">
