@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { createPortal } from "react-dom";
 import {
   Brain, Target, Settings, ArrowLeft, Check, X, Plus, Globe, Trophy,
   ChevronRight, Hash, Calendar, Clock, Users, MessageSquare, Smile,
@@ -2471,8 +2472,10 @@ function GlossaryText({ text }) {
     seen.add(term.toLowerCase());
     if (m.index > last) parts.push(text.slice(last, m.index));
     parts.push(
-      <button key={m.index} type="button" onClick={(e) => { e.stopPropagation(); setActive({ term, def: defOf(term) }); }}
-        className="underline decoration-dotted decoration-teal-500 text-teal-700 font-medium hover:text-teal-900">{term}</button>
+      <span key={m.index} role="button" tabIndex={0}
+        onClick={(e) => { e.stopPropagation(); setActive({ term, def: defOf(term) }); }}
+        onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); e.stopPropagation(); setActive({ term, def: defOf(term) }); } }}
+        className="cursor-pointer underline decoration-dotted decoration-teal-500 text-teal-700 font-medium hover:text-teal-900">{term}</span>
     );
     last = m.index + term.length;
   }
@@ -2480,14 +2483,15 @@ function GlossaryText({ text }) {
   return (
     <>
       {parts}
-      {active && (
+      {active && createPortal(
         <div className="fixed inset-0 z-[62] flex items-center justify-center p-4 bg-black/40" onClick={(e) => { e.stopPropagation(); setActive(null); }}>
           <div className="w-full max-w-xs rounded-2xl border border-stone-200 bg-white p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-1.5 text-sm font-bold text-teal-700 mb-1"><BookText size={15} /> {active.term}</div>
             <p className="text-sm text-stone-600 leading-relaxed">{active.def}</p>
             <button onClick={() => setActive(null)} className="mt-3 w-full rounded-xl bg-teal-600 text-white py-2 text-sm font-semibold hover:bg-teal-700">Got it</button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
