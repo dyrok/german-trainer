@@ -7,7 +7,7 @@ import {
   Shuffle, Sparkles, Search, Trash2, RefreshCw, ListChecks, Layers, Moon, Sun,
   Lightbulb, Send, Cpu, Atom, ChevronDown, Wand2, MessageCircle, Code,
   Download, Upload, Database, HelpCircle, Binary, Play, Pause, SkipForward, BookText, GitBranch,
-  Network, LineChart,
+  Network, LineChart, Calculator,
 } from "lucide-react";
 
 /* ═══════════════════════════ DATA ═══════════════════════════ */
@@ -512,6 +512,64 @@ const GLOSSARY = [
   ["O(n log n)", "Linearithmic time — typical of efficient comparison sorts like Merge Sort."],
 ];
 
+/* ═══════════════════════════ APTITUDE SUBJECT ═══════════════════════════ */
+// Quantitative aptitude (from class notes). Exams: Aptitude-I DILR (MCQ + Theory).
+const APTITUDE_QUIZ = [
+  { q: "56% of y is 182. Find y.", o: ["325", "318", "296", "340"], c: "A" },
+  { q: "What percent is 42 of 336?", o: ["12.5%", "14%", "8%", "16%"], c: "A" },
+  { q: "Rice costs 30% less than wheat. Wheat is how much % more than rice?", o: ["42.85%", "30%", "70%", "33.33%"], c: "A" },
+  { q: "A price is increased 10% then decreased 10%. Net change?", o: ["1% loss", "No change", "1% gain", "10% loss"], c: "A" },
+  { q: "Sugar price rises 25%. By how much must consumption drop to keep spend the same?", o: ["20%", "25%", "15%", "33.33%"], c: "A" },
+  { q: "Passing needs 40%. A student scores 20 marks and fails by 40. Max marks?", o: ["150", "120", "100", "200"], c: "A" },
+  { q: "In a 2-way election the loser got 40% and lost by 1000 votes. Total votes?", o: ["5000", "2500", "10000", "4000"], c: "A" },
+  { q: "A's salary is 50% more than B's. B's salary is how much % less than A's?", o: ["33.33%", "50%", "66.67%", "25%"], c: "A" },
+  { q: "Selling at ₹2880 gives a 20% loss. What is the cost price?", o: ["₹3600", "₹3456", "₹2400", "₹3000"], c: "A" },
+  { q: "Two numbers sum to 36 and multiply to 248. Sum of their reciprocals?", o: ["9/62", "1/8", "62/9", "9/31"], c: "A" },
+  { q: "A farm has 84 heads and 282 legs (hens & goats). How many hens?", o: ["27", "57", "42", "30"], c: "A" },
+  { q: "Ratio of two numbers is 3:8; adding 5 to both makes it 2:5. The smaller number is?", o: ["45", "120", "15", "40"], c: "A" },
+  { q: "If A:B = 3:7 and B:C = 9:5, then A:B:C =", o: ["27:63:35", "3:7:5", "27:35:63", "21:63:45"], c: "A" },
+  { q: "The fourth proportional of 9, 13, 153 is?", o: ["221", "117", "153", "199"], c: "A" },
+  { q: "The mean proportional of 7 and 63 is?", o: ["21", "35", "441", "70"], c: "A" },
+  { q: "How many terms are in the expansion of (a+b)^5?", o: ["6", "5", "7", "4"], c: "A" },
+  { q: "The 3rd term of (a+b)^5 is?", o: ["10a³b²", "5a⁴b", "10a²b³", "a³b²"], c: "A" },
+  { q: "ⁿPᵣ when r = n equals?", o: ["n!", "n", "1", "0"], c: "A" },
+  { q: "How many 3-digit numbers can be formed from 2,3,4,5,6 without repetition?", o: ["60", "125", "100", "120"], c: "A" },
+  { q: "Arrangements of HISTORY with Y and T always together?", o: ["1440", "720", "5040", "2880"], c: "A" },
+  { q: "Solve (n+1)!/(n−1)! = 42 for n.", o: ["6", "7", "5", "21"], c: "A" },
+  { q: "Mean of 7, 6, 5, 4, 8, 3, 9?", o: ["6", "5", "7", "42"], c: "A" },
+  { q: "Central angle of a pie slice for a value v out of total T?", o: ["(v/T)×360°", "(v/T)×100", "(v/T)×180°", "v/360"], c: "A" },
+  { q: "Team of 6 from 9 men & 6 women with at least 3 women — number of selections?", o: ["2275", "1680", "924", "540"], c: "A" },
+];
+
+const APTITUDE_MODULE_CARDS = [
+  ["Percentage", "How do you find x% of y?", "(x/100) × y."],
+  ["Percentage", "If A is p% more than B, how much % less is B than A?", "p/(100+p) × 100. e.g. +50% ⇒ B is 33.33% less."],
+  ["Percentage", "Net effect of increasing then decreasing by the same x%?", "A net loss of (x²/100)% — e.g. ±10% ⇒ 1% loss."],
+  ["Percentage", "If a price rises r%, how much to cut consumption to keep spend fixed?", "r/(100+r) × 100. e.g. +25% ⇒ cut 20%."],
+  ["Percentage", "Cost price from a loss% sale: SP = ₹2880 at 20% loss ⇒ CP?", "CP = SP × 100/(100−loss%) = 2880 × 100/80 = ₹3600."],
+  ["Ratio & Proportion", "Fourth proportional of a, b, c?", "x where a:b = c:x, so x = b·c/a."],
+  ["Ratio & Proportion", "Mean proportional of a and b?", "√(a·b)."],
+  ["Ratio & Proportion", "How to combine A:B and B:C into A:B:C?", "Scale both so B matches, then read across — e.g. 3:7 & 9:5 ⇒ 27:63:35."],
+  ["Ratio & Proportion", "Theorem of equal ratios: if a/p = b/q = c/r = k, then k = ?", "(a+b+c)/(p+q+r)."],
+  ["Linear Equations", "Sum of reciprocals of x and y?", "(x+y)/(xy)."],
+  ["Linear Equations", "Heads-and-legs (hens & goats) — how to set it up?", "x + y = heads; 2x + 4y = legs; solve the two equations."],
+  ["Linear Equations", "Sum of n consecutive integers centred at x?", "n·x (the terms are symmetric about the middle one)."],
+  ["Statistics", "Mean of a grouped frequency distribution?", "x̄ = Σ(fᵢxᵢ) / Σfᵢ, using class midpoints for xᵢ."],
+  ["Statistics", "Median of grouped data?", "L + [ (n/2 − cf) / f_m ] × c, where L = lower limit of the median class."],
+  ["Statistics", "Mode of grouped data?", "L + [ (f_m − f₁) / (2f_m − f₁ − f₂) ] × c."],
+  ["Statistics", "Central angle of a pie slice?", "(value / total) × 360°."],
+  ["Statistics", "Median of raw data with even n?", "Average of the (n/2)th and (n/2 + 1)th ordered values."],
+  ["Binomial", "How many terms in the expansion of (a+b)ⁿ?", "n + 1 (one more than the power)."],
+  ["Binomial", "General term T(r+1) of (a+b)ⁿ?", "ⁿCᵣ · a^(n−r) · b^r — note r is one less than the term number."],
+  ["Binomial", "Middle term(s) of (a+b)ⁿ?", "If n is even: the (n/2 + 1)th term. If n is odd: the ((n+1)/2)th and ((n+3)/2)th terms."],
+  ["Permutations & Combinations", "Permutations ⁿPᵣ — formula and when?", "n!/(n−r)! — use when order matters."],
+  ["Permutations & Combinations", "Combinations ⁿCᵣ — formula and when?", "n!/(r!(n−r)!) — use when order doesn't matter."],
+  ["Permutations & Combinations", "Useful symmetry of combinations?", "ⁿCᵣ = ⁿC₍ₙ₋ᵣ₎."],
+  ["Permutations & Combinations", "Arrangements of a word with a repeated letter?", "n! / (count of each repeat)! — e.g. TAMIM = 5!/2! = 60."],
+  ["Permutations & Combinations", "Count arrangements with two specific letters always together?", "Treat them as one block: (n−1)! × 2!."],
+  ["Permutations & Combinations", "Arrange so that no two vowels are together?", "Place the consonants first, then slot vowels into the gaps between them."],
+];
+
 /* ═══════════════════════════ PURE HELPERS ═══════════════════════════ */
 
 function shuffle(arr) {
@@ -734,7 +792,15 @@ function seedDsaCards() {
   return [...basics, ...modules, ...prof];
 }
 
-function seedAll() { return [...seedCards(), ...seedReactCards(), ...seedDsaCards()]; }
+function seedAptitudeCards() {
+  const basics = APTITUDE_QUIZ.map((item, i) =>
+    newCard(item.q, item.o[LETTER_IDX[item.c]], "Aptitude Basics", null, "a" + i, "aptitude"));
+  const modules = APTITUDE_MODULE_CARDS.map(([deck, q, a], i) =>
+    newCard(q, a, "Aptitude · " + deck, null, "am" + i, "aptitude"));
+  return [...basics, ...modules];
+}
+
+function seedAll() { return [...seedCards(), ...seedReactCards(), ...seedDsaCards(), ...seedAptitudeCards()]; }
 
 /* ─── Gamification core ─── */
 function defaultGame() {
@@ -888,7 +954,7 @@ function migrate(d) {
   if (!d) return freshData();
   let cards = d.cards.map((c) => c.subject ? c : { ...c, subject: "german" });
   const have = new Set(cards.map((c) => c.id));
-  const missing = [...seedReactCards(), ...seedDsaCards()].filter((rc) => !have.has(rc.id));
+  const missing = [...seedReactCards(), ...seedDsaCards(), ...seedAptitudeCards()].filter((rc) => !have.has(rc.id));
   if (missing.length) cards = [...cards, ...missing];
   const dg = defaultGame();
   const game = d.game
@@ -908,12 +974,14 @@ function makeBankQuiz(bank, section, n = 15) {
 }
 function makeReactQuiz(n = 15) { return makeBankQuiz(REACT_QUIZ, "React", n); }
 function makeDsaQuiz(n = 15)   { return makeBankQuiz(DSA_QUIZ, "DSA", n); }
+function makeAptitudeQuiz(n = 15) { return makeBankQuiz(APTITUDE_QUIZ, "Aptitude", n); }
 
 /* ─── Subject registry ─── */
 const SUBJECTS = {
   german: { id: "german", label: "German A1", sub: "Deutsch lernen", icon: Languages, accent: "teal" },
   react:  { id: "react",  label: "React",     sub: "Frontend basics", icon: Atom,     accent: "sky"  },
   dsa:    { id: "dsa",     label: "DSA",       sub: "Data structures & algorithms", icon: Binary, accent: "orange" },
+  aptitude: { id: "aptitude", label: "Aptitude", sub: "Quant · DILR", icon: Calculator, accent: "rose" },
 };
 const SUBJECT_LIST = Object.values(SUBJECTS);
 
@@ -2499,7 +2567,7 @@ function TimedQuiz({ subject, subjectLabel = "this subject", onAddMissed, onGame
       } catch (e) { msg = "AI unavailable (" + (e?.message || "error") + ") — using the built-in bank."; }
     }
     if (!questions.length) {
-      questions = subject === "react" ? makeReactQuiz(n) : subject === "dsa" ? makeDsaQuiz(n) : buildTest().slice(0, n);
+      questions = subject === "react" ? makeReactQuiz(n) : subject === "dsa" ? makeDsaQuiz(n) : subject === "aptitude" ? makeAptitudeQuiz(n) : buildTest().slice(0, n);
       if (!msg) msg = loadGroqKey()
         ? "Using the built-in question bank."
         : "Built-in question bank. Add a Groq key in Manage → AI settings for AI-curated sprints.";
@@ -3868,6 +3936,7 @@ export default function App() {
     else if (subview === "time")      { title = "Time";     content = <Exam make={() => buildN(genTime, 10)} subjectLabel={subjMeta.label} onAddMissed={addMissed} onGame={gameEvent} />; }
     else if (subview === "reactquiz") { title = "React Quiz"; content = <Exam make={() => makeReactQuiz(15)} subjectLabel="React" onAddMissed={addMissed} onGame={gameEvent} />; }
     else if (subview === "dsaquiz")   { title = "DSA Quiz"; content = <Exam make={() => makeDsaQuiz(15)} subjectLabel="DSA" onAddMissed={addMissed} onGame={gameEvent} />; }
+    else if (subview === "aptquiz")   { title = "Aptitude Quiz"; content = <Exam make={() => makeAptitudeQuiz(15)} subjectLabel="Aptitude" onAddMissed={addMissed} onGame={gameEvent} />; }
     else if (subview === "glossary")  { title = "Glossary"; content = <Glossary />; }
     else if (subview === "viz:sorting")    { title = "Sorting Lab"; content = <SortingViz />; }
     else if (subview === "viz:search")     { title = "Binary Search"; content = <SearchViz />; }
@@ -4131,6 +4200,33 @@ export default function App() {
         )}
 
         {/* ─── PRACTICE TAB ─── */}
+        {tab === "practice" && subject === "aptitude" && (
+          <div className="space-y-6">
+            <h1 className="text-2xl font-bold tracking-tight">
+              <span className="font-serif italic text-teal-700">Practice</span> · Aptitude
+            </h1>
+            <div className="rounded-xl bg-rose-50 border border-rose-200 p-3 text-xs text-rose-700">
+              📌 Exam — Aptitude-I DILR: MCQ (12:00–12:30 PM) & Theory (1:00–3:00 PM), 24 Jun 2026.
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-2.5"><span className="text-xs font-semibold uppercase tracking-wide text-stone-400">Quizzes</span><div className="h-px flex-1 bg-stone-200" /></div>
+              <div className="grid grid-cols-2 gap-2.5">
+                <Tile label="Aptitude Quiz" sub={`${APTITUDE_QUIZ.length} MCQs · shuffled`} icon={ListChecks} onClick={() => setSubview("aptquiz")} />
+                <Tile label="Timed Sprint" sub="best quiz in your time" icon={Clock} onClick={() => setSubview("timed")} />
+                <Tile label="AI Quiz" sub="generate from a topic" icon={Wand2} onClick={() => setSubview("aiquiz")} />
+              </div>
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-2.5"><span className="text-xs font-semibold uppercase tracking-wide text-stone-400">Topic modules</span><div className="h-px flex-1 bg-stone-200" /></div>
+              <div className="grid grid-cols-2 gap-2.5">
+                {subjectDecks.map((d) => (
+                  <Tile key={d} label={d.replace(/^Aptitude · /, "")} sub={moduleSub(d)} icon={Layers} onClick={() => setSubview("cards:" + d)} />
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+
         {tab === "practice" && subject === "dsa" && (
           <div className="space-y-6">
             <h1 className="text-2xl font-bold tracking-tight">
