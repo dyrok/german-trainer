@@ -522,32 +522,26 @@ function hasLocalStore() {
 }
 function hasStore() { return hasSandboxStore() || hasLocalStore(); }
 
+// Durable localStorage is the source of truth (survives app updates/redeploys).
+// The sandbox/preview store (window.storage) is ephemeral — it's only a fallback,
+// and we mirror writes to it so the preview stays in sync.
 async function loadData() {
-  if (hasSandboxStore()) {
-    try { const r = await window.storage.get(KEY, false); return r ? JSON.parse(r.value) : null; }
-    catch { return null; }
-  }
   if (hasLocalStore()) {
-    try { const v = window.localStorage.getItem(KEY); return v ? JSON.parse(v) : null; }
-    catch { return null; }
+    try { const v = window.localStorage.getItem(KEY); if (v) return JSON.parse(v); } catch {}
+  }
+  if (hasSandboxStore()) {
+    try { const r = await window.storage.get(KEY, false); if (r) return JSON.parse(r.value); } catch {}
   }
   return null;
 }
 async function persist(d) {
-  if (hasSandboxStore()) {
-    try { await window.storage.set(KEY, JSON.stringify(d), false); return; } catch {}
-  }
-  if (hasLocalStore()) {
-    try { window.localStorage.setItem(KEY, JSON.stringify(d)); } catch {}
-  }
+  const json = JSON.stringify(d);
+  if (hasLocalStore())   { try { window.localStorage.setItem(KEY, json); } catch {} }
+  if (hasSandboxStore()) { try { await window.storage.set(KEY, json, false); } catch {} }
 }
 async function clearData() {
-  if (hasSandboxStore()) {
-    try { await window.storage.delete(KEY, false); } catch {}
-  }
-  if (hasLocalStore()) {
-    try { window.localStorage.removeItem(KEY); } catch {}
-  }
+  if (hasLocalStore())   { try { window.localStorage.removeItem(KEY); } catch {} }
+  if (hasSandboxStore()) { try { await window.storage.delete(KEY, false); } catch {} }
 }
 
 function seedCards() {
@@ -2285,6 +2279,24 @@ export default function App() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
+  }, [session, subview, tab]);
+
+  // Browser/hardware Back button: unwind in-app navigation instead of leaving the site.
+  useEffect(() => {
+    const deep = !!(session || subview || tab !== "study");
+    // Arm a history "trap" whenever we're in a deep view, so Back fires popstate.
+    if (deep && !(window.history.state && window.history.state.trap)) {
+      window.history.pushState({ trap: true }, "");
+    }
+    function onPop() {
+      // Back was pressed — step back one in-app level and re-arm the trap.
+      if (session)            { setSession(null); window.history.pushState({ trap: true }, ""); }
+      else if (subview)       { setSubview(null); window.history.pushState({ trap: true }, ""); }
+      else if (tab !== "study") { setTab("study"); window.history.pushState({ trap: true }, ""); }
+      // else: at home — let the browser navigate away normally.
+    }
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
   }, [session, subview, tab]);
 
   if (!data) {
