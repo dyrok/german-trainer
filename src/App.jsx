@@ -774,6 +774,62 @@ function TranslatePanel({ t }) {
   );
 }
 
+/* ═══════════════════════════ MARKDOWN ═══════════════════════════ */
+
+// Inline markdown: `code`, **bold**, *italic* / _italic_. Returns React nodes.
+function mdInline(text, kp) {
+  const out = [];
+  const re = /(`[^`]+`|\*\*[^*]+\*\*|__[^_]+__|\*[^*]+\*|_[^_]+_)/g;
+  let last = 0, m, i = 0;
+  while ((m = re.exec(text))) {
+    if (m.index > last) out.push(text.slice(last, m.index));
+    const t = m[0];
+    if (t.startsWith("`")) out.push(<code key={kp + i} className="px-1 py-0.5 rounded bg-black/10 font-mono text-[0.9em]">{t.slice(1, -1)}</code>);
+    else if (t.startsWith("**") || t.startsWith("__")) out.push(<strong key={kp + i}>{t.slice(2, -2)}</strong>);
+    else out.push(<em key={kp + i}>{t.slice(1, -1)}</em>);
+    last = m.index + t.length; i++;
+  }
+  if (last < text.length) out.push(text.slice(last));
+  return out;
+}
+
+// Lightweight markdown block renderer (no dependency): paragraphs, headings,
+// bullet/ordered lists, and fenced code blocks.
+function Markdown({ text, className = "" }) {
+  const lines = String(text || "").split("\n");
+  const blocks = [];
+  let i = 0;
+  const isItem = (l) => /^\s*([-*+]|\d+\.)\s+/.test(l);
+  while (i < lines.length) {
+    const line = lines[i];
+    if (line.trim().startsWith("```")) {
+      const buf = []; i++;
+      while (i < lines.length && !lines[i].trim().startsWith("```")) { buf.push(lines[i]); i++; }
+      i++;
+      blocks.push(<pre key={blocks.length} className="my-1.5 overflow-auto rounded-lg bg-black/10 p-2 text-[0.85em] font-mono whitespace-pre">{buf.join("\n")}</pre>);
+      continue;
+    }
+    const h = line.match(/^(#{1,6})\s+(.*)$/);
+    if (h) { blocks.push(<div key={blocks.length} className="font-semibold mt-1.5 mb-0.5">{mdInline(h[2], blocks.length + "-")}</div>); i++; continue; }
+    if (isItem(line)) {
+      const ordered = /^\s*\d+\./.test(line); const items = [];
+      while (i < lines.length && isItem(lines[i])) {
+        items.push(<li key={items.length}>{mdInline(lines[i].replace(/^\s*([-*+]|\d+\.)\s+/, ""), blocks.length + "-" + items.length + "-")}</li>);
+        i++;
+      }
+      blocks.push(ordered
+        ? <ol key={blocks.length} className="list-decimal pl-5 my-1 space-y-0.5">{items}</ol>
+        : <ul key={blocks.length} className="list-disc pl-5 my-1 space-y-0.5">{items}</ul>);
+      continue;
+    }
+    if (line.trim() === "") { i++; continue; }
+    const buf = [];
+    while (i < lines.length && lines[i].trim() !== "" && !lines[i].trim().startsWith("```") && !/^#{1,6}\s/.test(lines[i]) && !isItem(lines[i])) { buf.push(lines[i]); i++; }
+    blocks.push(<p key={blocks.length} className="my-1 first:mt-0 last:mb-0">{mdInline(buf.join(" "), blocks.length + "-")}</p>);
+  }
+  return <div className={className}>{blocks}</div>;
+}
+
 /* ═══════════════════════════ AI EXPLAIN ═══════════════════════════ */
 
 // Reusable "Explain with AI" affordance. `run` is an async fn returning text.
@@ -784,9 +840,9 @@ function AIExplain({ run, label = "Explain with AI" }) {
 
   if (text) {
     return (
-      <div className="rounded-lg bg-sky-50 border border-sky-200 px-3 py-2 text-xs text-sky-900 whitespace-pre-wrap leading-relaxed">
+      <div className="rounded-lg bg-sky-50 border border-sky-200 px-3 py-2 text-xs text-sky-900 leading-relaxed">
         <div className="flex items-center gap-1.5 font-semibold text-sky-700 mb-1"><Sparkles size={12} /> AI explanation</div>
-        {text}
+        <Markdown text={text} />
       </div>
     );
   }
@@ -2081,9 +2137,9 @@ function Tutor({ subjectLabel = "this subject", actions }) {
         )}
         {msgs.map((m, i) => (
           <div key={i} className={`flex ${m.role === "user" ? "justify-end" : "justify-start"}`}>
-            <div className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm whitespace-pre-wrap leading-relaxed ${
-              m.role === "user" ? "bg-teal-600 text-white" : "bg-stone-100 text-stone-800 border border-stone-200"}`}>
-              {m.content}
+            <div className={`max-w-[85%] rounded-2xl px-3.5 py-2 text-sm leading-relaxed ${
+              m.role === "user" ? "bg-teal-600 text-white whitespace-pre-wrap" : "bg-stone-100 text-stone-800 border border-stone-200"}`}>
+              {m.role === "user" ? m.content : <Markdown text={m.content} />}
             </div>
           </div>
         ))}
@@ -2153,6 +2209,8 @@ const DARK_CSS = [
   ".dark .border-orange-200 { border-color: #7c2d12; }",
   ".dark .bg-sky-50     { background-color: #082f49; }",
   ".dark .text-sky-700   { color: #7dd3fc; }",
+  ".dark .text-sky-800   { color: #7dd3fc; }",
+  ".dark .text-sky-900   { color: #bae6fd; }",
   ".dark .border-sky-200 { border-color: #0c4a6e; }",
   ".dark .bg-indigo-50  { background-color: #1e1b4b; }",
   ".dark .text-indigo-900 { color: #c7d2fe; }",
