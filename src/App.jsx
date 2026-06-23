@@ -782,6 +782,18 @@ const ACHIEVEMENTS = [
 function checkAchievements(g, data) {
   return ACHIEVEMENTS.filter((a) => !g.achievements[a.id] && a.test(g, data));
 }
+
+// Coin shop — cosmetics. { id, type:'avatar'|'title', value, name, cost }
+const SHOP_ITEMS = [
+  { id: "av_owl",   type: "avatar", value: "🦉", name: "Owl",        cost: 80 },
+  { id: "av_rocket",type: "avatar", value: "🚀", name: "Rocket",     cost: 120 },
+  { id: "av_dragon",type: "avatar", value: "🐉", name: "Dragon",     cost: 200 },
+  { id: "av_crown", type: "avatar", value: "👑", name: "Crown",      cost: 400 },
+  { id: "ti_scholar",  type: "title", value: "Scholar",      name: "Title: Scholar",      cost: 100 },
+  { id: "ti_sensei",   type: "title", value: "Sensei",       name: "Title: Sensei",       cost: 250 },
+  { id: "ti_grandmaster", type: "title", value: "Grandmaster", name: "Title: Grandmaster", cost: 500 },
+];
+const DEFAULT_AVATAR = "🧠";
 const TIER_COL = { bronze: "text-amber-700 bg-amber-50 border-amber-200", silver: "text-stone-600 bg-stone-100 border-stone-300", gold: "text-yellow-700 bg-yellow-50 border-yellow-300" };
 
 function Confetti() {
@@ -3538,6 +3550,19 @@ export default function App() {
 
   function showFlash(msg) { setFlash(msg); setTimeout(() => setFlash(""), 2500); }
 
+  function buyItem(item) {
+    const g = data.game || defaultGame();
+    if ((g.cosmetics.owned || []).includes(item.id) || g.coins < item.cost) return;
+    commit((d) => ({ ...d, game: { ...d.game, coins: d.game.coins - item.cost,
+      cosmetics: { ...d.game.cosmetics, owned: [...(d.game.cosmetics.owned || []), item.id],
+        equipped: { ...d.game.cosmetics.equipped, [item.type]: item.value } } } }));
+    if (g.sound) playSfx("unlock"); showFlash("Unlocked " + item.name);
+  }
+  function equipItem(item) {
+    commit((d) => ({ ...d, game: { ...d.game, cosmetics: { ...d.game.cosmetics,
+      equipped: { ...d.game.cosmetics.equipped, [item.type]: d.game.cosmetics.equipped[item.type] === item.value ? "" : item.value } } } }));
+  }
+
   // Central gamification event: award XP/coins, track stats/daily/history, detect level-ups & achievements.
   function gameEvent(type, payload = {}) {
     const today = todayStr();
@@ -4342,6 +4367,13 @@ export default function App() {
           return (
             <div className="space-y-5">
               <h1 className="text-2xl font-bold tracking-tight"><span className="font-serif italic text-teal-700">Profile</span></h1>
+              <div className="flex items-center gap-3">
+                <div className="w-14 h-14 rounded-2xl bg-teal-50 border border-teal-200 flex items-center justify-center text-3xl">{game.cosmetics.equipped.avatar || DEFAULT_AVATAR}</div>
+                <div>
+                  <div className="text-lg font-bold text-stone-800">{data.profile && data.profile.name ? data.profile.name : "You"}</div>
+                  {game.cosmetics.equipped.title && <div className="text-xs font-semibold text-teal-600">{game.cosmetics.equipped.title}</div>}
+                </div>
+              </div>
               <XpStrip game={game} onProfile={() => {}} />
 
               <div className="grid grid-cols-3 gap-2.5">
@@ -4391,6 +4423,28 @@ export default function App() {
                   <div className="grid grid-rows-7 grid-flow-col gap-1 w-max">
                     {days.map((d) => <div key={d} title={`${d}: ${game.history[d] || 0} reviews`} className={`w-3.5 h-3.5 rounded-sm ${heatCol(game.history[d] || 0)}`} />)}
                   </div>
+                </div>
+              </div>
+
+              {/* shop */}
+              <div>
+                <div className="flex items-center gap-2 mb-2.5"><span className="text-xs font-semibold uppercase tracking-wide text-stone-400">Shop · spend coins 🪙</span><div className="h-px flex-1 bg-stone-200" /></div>
+                <div className="grid grid-cols-2 gap-2.5">
+                  {SHOP_ITEMS.map((it) => {
+                    const owned = (game.cosmetics.owned || []).includes(it.id);
+                    const equipped = game.cosmetics.equipped[it.type] === it.value;
+                    return (
+                      <div key={it.id} className="rounded-xl border border-stone-200 bg-white p-3 flex items-center gap-2.5">
+                        <div className="shrink-0 w-9 h-9 rounded-xl bg-stone-50 border border-stone-200 flex items-center justify-center text-lg">{it.type === "avatar" ? it.value : "🏷️"}</div>
+                        <div className="flex-1 min-w-0">
+                          <div className="text-sm font-semibold text-stone-800 truncate">{it.name}</div>
+                          {owned
+                            ? <button onClick={() => equipItem(it)} className={`text-xs font-medium ${equipped ? "text-teal-600" : "text-stone-400 hover:text-teal-600"}`}>{equipped ? "✓ Equipped" : "Equip"}</button>
+                            : <button onClick={() => buyItem(it)} disabled={game.coins < it.cost} className="text-xs font-medium text-amber-600 hover:text-amber-700 disabled:text-stone-300">🪙 {it.cost}</button>}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </div>
