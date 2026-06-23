@@ -575,49 +575,49 @@ const APTITUDE_MODULE_CARDS = [
 // Solve-it problems: { topic, q(LaTeX), answer, accept[], solution(LaTeX steps), revealOnly? }
 const APTITUDE_PROBLEMS = [
   { topic: "Percentage", q: "56\\% \\text{ of } y = 182. \\quad \\text{Find } y.", answer: "325",
-    solution: "$\\frac{56}{100}\\times y = 182$\n$y = 182\\times\\frac{100}{56} = 325$" },
+    solution: "“% of” means multiply, and $56\\%=\\frac{56}{100}$. So:\n$$\\frac{56}{100}\\times y = 182$$\nTo isolate $y$, multiply both sides by $\\frac{100}{56}$:\n$$y = 182\\times\\frac{100}{56} = \\frac{18200}{56}$$\nDivide: $18200\\div 56 = 325$.\n$$\\boxed{y = 325}$$\nCheck: $56\\%$ of $325 = 0.56\\times325 = 182$. ✓" },
   { topic: "Percentage", q: "\\text{What percent is } 42 \\text{ of } 336?", answer: "12.5", accept: ["12.5%"],
-    solution: "$\\frac{42}{336}\\times 100 = 12.5\\%$" },
+    solution: "“What percent is A of B” $=\\dfrac{A}{B}\\times100$. Here $A=42,\\ B=336$:\n$$\\frac{42}{336}\\times100$$\nSimplify $\\frac{42}{336}$: both divide by 42, giving $\\frac{1}{8}$.\n$$\\frac{1}{8}\\times100 = 12.5$$\n$$\\boxed{12.5\\%}$$" },
   { topic: "Percentage", q: "\\text{A price rises } 10\\% \\text{ then falls } 10\\%. \\text{ Net change } \\%?", answer: "1", accept: ["1%", "-1", "1% loss"],
-    solution: "Start ₹100. $+10\\%\\to 110$. Then $-10\\%$ of 110 $=11\\to 99$.\nNet $=100-99=\\mathbf{1\\%\\text{ loss}}$. (General: $-\\frac{x^2}{100}\\%$.)" },
+    solution: "Take a convenient start of ₹100.\nStep 1 — rise $10\\%$: $100 + 10\\%\\text{ of }100 = 100+10 = 110$.\nStep 2 — fall $10\\%$ (of the NEW value 110): $10\\%\\text{ of }110 = 11$, so $110-11 = 99$.\nNet: ended at $99$ vs start $100$ → a drop of $1$.\n$$\\boxed{1\\%\\text{ loss}}$$\nWhy it isn't 0: the fall is taken on the larger amount. In general $+x\\%$ then $-x\\%$ gives a net $-\\dfrac{x^2}{100}\\%$ (here $\\frac{10^2}{100}=1\\%$)." },
   { topic: "Percentage", q: "\\text{Sugar price rises } 25\\%. \\text{ \\% cut in consumption to keep spend fixed?}", answer: "20", accept: ["20%"],
-    solution: "New price index $=125$ for the same ₹100.\nNew qty $=\\frac{100}{125}=0.8$, a $\\mathbf{20\\%}$ cut. (General: $\\frac{r}{100+r}\\times100$.)" },
+    solution: "Spend $=$ price $\\times$ quantity. Keep spend fixed while price rises $25\\%$.\nLet old price $=100$, old qty $=1$ (spend $=100$). New price $=125$.\nNew qty $=\\dfrac{\\text{spend}}{\\text{new price}}=\\dfrac{100}{125}=0.8$.\nDrop $=1-0.8 = 0.2 = 20\\%$.\n$$\\boxed{20\\%}$$\nShortcut: cut $=\\dfrac{r}{100+r}\\times100 = \\dfrac{25}{125}\\times100 = 20\\%$." },
   { topic: "Percentage", q: "\\text{Pass mark } 40\\%. \\text{ Scores } 20, \\text{ fails by } 40. \\text{ Max marks?}", answer: "150",
-    solution: "Passing marks $=20+40=60$.\n$\\frac{40}{100}x=60\\Rightarrow x=\\mathbf{150}$." },
+    solution: "“Fails by 40” means he needed 40 more to reach the pass mark.\nPassing marks $= \\text{scored} + \\text{shortfall} = 20+40 = 60$.\nPassing is $40\\%$ of the maximum $x$:\n$$\\frac{40}{100}\\times x = 60$$\n$$x = 60\\times\\frac{100}{40} = \\boxed{150}$$" },
   { topic: "Percentage", q: "\\text{Selling at ₹2880 gives a } 20\\% \\text{ loss. Cost price?}", answer: "3600", accept: ["₹3600"],
-    solution: "$CP=SP\\times\\frac{100}{100-20}=2880\\times\\frac{100}{80}=\\mathbf{3600}$." },
+    solution: "A $20\\%$ loss means SP is $100-20 = 80\\%$ of CP.\n$$SP = \\frac{80}{100}\\times CP \\Rightarrow 2880 = 0.8\\,CP$$\n$$CP = \\frac{2880}{0.8} = 2880\\times\\frac{100}{80} = \\boxed{₹3600}$$\nCheck: $20\\%$ of 3600 $=720$, and $3600-720 = 2880$. ✓" },
   { topic: "Ratio & Proportion", q: "\\text{Ratio } 3:8;\\ \\text{adding 5 to both} \\to 2:5.\\ \\text{Smaller number?}", answer: "45",
-    solution: "$\\frac{3x+5}{8x+5}=\\frac{2}{5}\\Rightarrow 15x+25=16x+10\\Rightarrow x=15$.\nSmaller $=3\\times15=\\mathbf{45}$." },
+    solution: "Let the numbers be $3x$ and $8x$ (so their ratio is exactly $3:8$).\nAfter adding 5 to each:\n$$\\frac{3x+5}{8x+5} = \\frac{2}{5}$$\nCross-multiply:\n$$5(3x+5) = 2(8x+5)$$\n$$15x+25 = 16x+10$$\n$$25-10 = 16x-15x \\Rightarrow x = 15$$\nSmaller number $= 3x = 3\\times15 = \\boxed{45}$." },
   { topic: "Ratio & Proportion", q: "\\text{Fourth proportional of } 9,\\ 13,\\ 153?", answer: "221",
-    solution: "$\\frac{9}{13}=\\frac{153}{x}\\Rightarrow x=\\frac{153\\times13}{9}=\\mathbf{221}$." },
+    solution: "The fourth proportional $x$ satisfies $a:b = c:x$, i.e. $\\dfrac{a}{b}=\\dfrac{c}{x}$.\n$$\\frac{9}{13} = \\frac{153}{x}$$\nCross-multiply: $9x = 13\\times153$.\n$$x = \\frac{13\\times153}{9} = \\frac{1989}{9} = \\boxed{221}$$" },
   { topic: "Ratio & Proportion", q: "\\text{Mean proportional of } 7 \\text{ and } 63?", answer: "21",
-    solution: "$x=\\sqrt{7\\times63}=\\sqrt{441}=\\mathbf{21}$." },
+    solution: "The mean proportional $x$ of $a,b$ satisfies $a:x = x:b$, so $x^2 = ab$.\n$$x^2 = 7\\times63 = 441$$\n$$x = \\sqrt{441} = \\boxed{21}$$" },
   { topic: "Linear Equations", q: "\\text{Two numbers sum to } 36,\\ \\text{product } 248.\\ \\text{Sum of reciprocals?}", answer: "9/62", accept: ["0.145"],
-    solution: "$\\frac{1}{x}+\\frac{1}{y}=\\frac{x+y}{xy}=\\frac{36}{248}=\\mathbf{\\frac{9}{62}}$." },
+    solution: "Let the numbers be $x,y$ with $x+y = 36$ and $xy = 248$.\nThe sum of reciprocals has a neat identity:\n$$\\frac{1}{x}+\\frac{1}{y} = \\frac{y+x}{xy} = \\frac{x+y}{xy}$$\nSubstitute the known sum and product:\n$$= \\frac{36}{248}$$\nSimplify (divide top and bottom by 4):\n$$\\boxed{\\frac{9}{62}}$$" },
   { topic: "Linear Equations", q: "\\text{84 heads, 282 legs (hens \\& goats). Number of hens?}", answer: "27",
-    solution: "$x+y=84,\\ 2x+4y=282$.\nSubtract $2\\times$first: $2y=114\\Rightarrow y=57$ goats, so hens $=\\mathbf{27}$." },
+    solution: "Each animal has 1 head; a hen has 2 legs, a goat has 4. Let hens $=x$, goats $=y$.\n$$x+y = 84 \\quad(\\text{heads})$$\n$$2x+4y = 282 \\quad(\\text{legs})$$\nMultiply the first by 2: $2x+2y = 168$. Subtract from the legs equation:\n$$(2x+4y)-(2x+2y) = 282-168 \\Rightarrow 2y = 114 \\Rightarrow y = 57$$\nSo goats $=57$, and hens $= 84-57 = \\boxed{27}$." },
   { topic: "Linear Equations", q: "\\text{Sum of 5 consecutive integers is } 335.\\ \\text{Smallest + largest?}", answer: "134",
-    solution: "Middle $x:\\ 5x=335\\Rightarrow x=67$ (numbers 65–69).\nSmallest $+$ largest $=65+69=\\mathbf{134}$." },
+    solution: "Center the 5 numbers on $x$: $\\;x-2,\\ x-1,\\ x,\\ x+1,\\ x+2$.\nTheir sum collapses to $5x$ (the $\\pm$ terms cancel):\n$$5x = 335 \\Rightarrow x = 67$$\nNumbers: $65,66,67,68,69$. Smallest + largest $= 65+69 = \\boxed{134}$.\n(Equivalently it's $2x = 134$ — the extremes average to the middle.)" },
   { topic: "Binomial", q: "\\text{Number of terms in } (a+b)^5?", answer: "6",
-    solution: "Terms $=n+1=5+1=\\mathbf{6}$." },
+    solution: "Expanding $(a+b)^n$ gives powers of $a$ from $a^n$ down to $a^0$ — that's $0,1,\\dots,n$, i.e. $n+1$ values.\nHere $n=5$:\n$$\\text{terms} = n+1 = 5+1 = \\boxed{6}$$" },
   { topic: "Binomial", q: "\\text{Find the 3rd term of } (a+b)^5.", answer: "10a^3b^2", accept: ["10a3b2", "10a³b²"],
-    solution: "$T_{r+1}={}^nC_r\\,a^{n-r}b^{r}$ with $n=5,r=2$:\n$T_3={}^5C_2\\,a^3b^2=\\mathbf{10a^3b^2}$." },
+    solution: "General term: $T_{r+1} = {}^nC_r\\,a^{\\,n-r}b^{\\,r}$. The “3rd term” means $r+1=3$, so $r=2$ (and $n=5$).\n$$T_3 = {}^5C_2\\,a^{5-2}b^{2} = {}^5C_2\\,a^{3}b^{2}$$\nCompute ${}^5C_2 = \\dfrac{5\\times4}{2\\times1} = 10$.\n$$\\boxed{T_3 = 10a^{3}b^{2}}$$" },
   { topic: "Binomial", q: "\\text{Middle term of } \\left(3x+\\tfrac{1}{\\sqrt{x}}\\right)^6 ?", revealOnly: true, answer: "540x^{3/2}",
-    solution: "7 terms ⇒ middle is the 4th term, $n=6,r=3$:\n$T_4={}^6C_3(3x)^3(x^{-1/2})^3=20\\cdot27x^3\\cdot x^{-3/2}=\\mathbf{540x^{3/2}}$." },
+    solution: "Number of terms $= n+1 = 7$ (odd), so there's one middle term: the $\\frac{7+1}{2}=4$th term, i.e. $r=3$.\n$$T_4 = {}^6C_3\\,(3x)^{3}\\left(x^{-1/2}\\right)^{3}$$\n${}^6C_3 = 20$, $(3x)^3 = 27x^3$, $\\left(x^{-1/2}\\right)^3 = x^{-3/2}$.\n$$T_4 = 20\\cdot27\\cdot x^{3-3/2} = 540\\,x^{3/2}$$\n$$\\boxed{540x^{3/2}} \\;=\\; 540x\\sqrt{x}$$" },
   { topic: "Permutations & Combinations", q: "\\text{How many 3-digit numbers from } 2,3,4,5,6 \\text{ without repetition?}", answer: "60",
-    solution: "$5\\times4\\times3=\\mathbf{60}$." },
+    solution: "Fill 3 positions left to right; no digit repeats (order matters → permutation).\nHundreds: 5 choices. Tens: 4 left. Units: 3 left.\n$$5\\times4\\times3 = \\boxed{60}$$\n(This is exactly ${}^5P_3 = \\dfrac{5!}{2!} = 60$.)" },
   { topic: "Permutations & Combinations", q: "\\text{Arrangements of HISTORY with Y and T always together?}", answer: "1440",
-    solution: "Treat YT as one block: $6!\\times2!=720\\times2=\\mathbf{1440}$." },
+    solution: "HISTORY has 7 distinct letters. “Y and T together” → glue them into one block, so you arrange $6$ items (the block + H,I,S,O,R).\n$$6! = 720 \\text{ ways}$$\nInside the block, Y and T can swap: $2! = 2$ ways.\n$$6!\\times2! = 720\\times2 = \\boxed{1440}$$" },
   { topic: "Permutations & Combinations", q: "\\text{Solve } \\dfrac{(n+1)!}{(n-1)!}=42.", answer: "6",
-    solution: "$(n+1)(n)=42\\Rightarrow n^2+n-42=0\\Rightarrow(n-6)(n+7)=0\\Rightarrow n=\\mathbf{6}$." },
+    solution: "Expand the factorial ratio — $(n+1)! = (n+1)(n)(n-1)!$, so the $(n-1)!$ cancels:\n$$\\frac{(n+1)(n)(n-1)!}{(n-1)!} = (n+1)(n) = 42$$\n$$n^2+n-42 = 0$$\nFactor: $(n-6)(n+7) = 0 \\Rightarrow n = 6$ or $n=-7$. Reject the negative.\n$$\\boxed{n = 6}$$" },
   { topic: "Permutations & Combinations", q: "\\text{Team of 6 from 9 men \\& 6 women, at least 3 women. Selections?}", answer: "2275",
-    solution: "$\\binom{6}{3}\\binom{9}{3}+\\binom{6}{4}\\binom{9}{2}+\\binom{6}{5}\\binom{9}{1}+\\binom{6}{6}\\binom{9}{0}$\n$=1680+540+54+1=\\mathbf{2275}$." },
+    solution: "“At least 3 women” means 3, 4, 5, or 6 women (the rest are men, to total 6). Add the cases:\n$$\\binom{6}{3}\\binom{9}{3} + \\binom{6}{4}\\binom{9}{2} + \\binom{6}{5}\\binom{9}{1} + \\binom{6}{6}\\binom{9}{0}$$\n$$= (20)(84) + (15)(36) + (6)(9) + (1)(1)$$\n$$= 1680 + 540 + 54 + 1 = \\boxed{2275}$$" },
   { topic: "Statistics", q: "\\text{Mean of } 7,6,5,4,8,3,9?", answer: "6",
-    solution: "$\\bar{x}=\\frac{7+6+5+4+8+3+9}{7}=\\frac{42}{7}=\\mathbf{6}$." },
+    solution: "Mean $= \\dfrac{\\text{sum of values}}{\\text{count}}$.\nSum $= 7+6+5+4+8+3+9 = 42$; count $= 7$.\n$$\\bar{x} = \\frac{42}{7} = \\boxed{6}$$" },
   { topic: "Statistics", q: "\\text{A pie slice for ₹2000 spans } 60°.\\ \\text{Total investment?}", answer: "12000", accept: ["₹12000"],
-    solution: "$\\frac{60}{360}\\times T=2000\\Rightarrow T=2000\\times6=\\mathbf{12000}$." },
+    solution: "In a pie chart a slice's angle is proportional to its value: $\\dfrac{\\text{value}}{\\text{total}} = \\dfrac{\\text{angle}}{360°}$.\n$$\\frac{2000}{T} = \\frac{60}{360} = \\frac{1}{6}$$\n$$T = 2000\\times6 = \\boxed{₹12000}$$" },
   { topic: "Statistics", q: "\\text{Central angle for marks } 90 \\text{ out of total } 400?", answer: "81", accept: ["81°"],
-    solution: "$\\frac{90}{400}\\times360=\\mathbf{81°}$." },
+    solution: "Central angle $= \\dfrac{\\text{value}}{\\text{total}}\\times360°$.\n$$= \\frac{90}{400}\\times360° = 0.225\\times360°$$\n$$= \\boxed{81°}$$" },
 ];
 
 const APTITUDE_FORMULAS = [
@@ -1312,12 +1312,16 @@ function TranslatePanel({ t }) {
 // Inline markdown: `code`, **bold**, *italic* / _italic_. Returns React nodes.
 function mdInline(text, kp) {
   const out = [];
-  const re = /(`[^`]+`|\*\*[^*]+\*\*|__[^_]+__|\*[^*]+\*|_[^_]+_)/g;
+  // math ($$..$$ / $..$ / \(..\)) is matched first so KaTeX renders it
+  const re = /(\$\$[^$]+\$\$|\$[^$\n]+\$|\\\([^)]+\\\)|`[^`]+`|\*\*[^*]+\*\*|__[^_]+__|\*[^*]+\*|_[^_]+_)/g;
   let last = 0, m, i = 0;
   while ((m = re.exec(text))) {
     if (m.index > last) out.push(text.slice(last, m.index));
     const t = m[0];
-    if (t.startsWith("`")) out.push(<code key={kp + i} className="px-1 py-0.5 rounded bg-black/10 font-mono text-[0.9em]">{t.slice(1, -1)}</code>);
+    if (t.startsWith("$$")) out.push(<Latex key={kp + i} tex={t.slice(2, -2)} block />);
+    else if (t.startsWith("$")) out.push(<Latex key={kp + i} tex={t.slice(1, -1)} />);
+    else if (t.startsWith("\\(")) out.push(<Latex key={kp + i} tex={t.slice(2, -2)} />);
+    else if (t.startsWith("`")) out.push(<code key={kp + i} className="px-1 py-0.5 rounded bg-black/10 font-mono text-[0.9em]">{t.slice(1, -1)}</code>);
     else if (t.startsWith("**") || t.startsWith("__")) out.push(<strong key={kp + i}>{t.slice(2, -2)}</strong>);
     else out.push(<em key={kp + i}>{t.slice(1, -1)}</em>);
     last = m.index + t.length; i++;
@@ -2884,7 +2888,7 @@ function AgentChat({ subjectLabel = "this subject", actions, messages, setMessag
         `You are a friendly, concise ${subjectLabel} tutor inside a study app.` +
         (actions ? " You can also take actions with the provided tools — when asked to add/edit/delete cards, start studying or cramming, make a quiz, switch subject, or change settings, DO IT with the right tool. Use list_cards for ids before editing/deleting." : "") +
         (context ? `\nThis chat is about: ${context}\nKeep your help focused on that.` : "") +
-        " Answer clearly and use markdown when helpful. Always reply in English." };
+        " Answer clearly and use markdown when helpful. For any math, ALWAYS use LaTeX — $...$ inline and $$...$$ for displayed equations; for multi-step math, show each step in detail (don't give one-line answers). Always reply in English." };
       const work = [sys, ...visible];
       for (let step = 0; step < 6; step++) {
         const msg = await groqChatRaw(work, { tools: actions ? AGENT_TOOLS : undefined, temperature: 0.4, max_tokens: 1200 });
@@ -3586,6 +3590,15 @@ function SolveSet({ problems, onGame }) {
           <MathText text={p.solution} />
         </div>
       )}
+      {done && (
+        <AIExplain key={"ai" + pos} label="Explain step-by-step with AI" subjectLabel="Aptitude"
+          chatContext={`Aptitude problem (${p.topic}): ${p.q.replace(/\\text\{|\}|\\/g, " ")} — answer ${p.answer}`}
+          run={() => groqChat([{ role: "user", content:
+            "You are a patient aptitude tutor. Explain how to solve this problem step by step, in detail, so a beginner understands the WHY of each step. " +
+            "Render ALL math in LaTeX — use $...$ inline and $$...$$ for displayed steps.\n\n" +
+            "Problem (LaTeX): " + p.q + "\nCorrect answer: " + p.answer
+          }], { temperature: 0.3, max_tokens: 700 })} />
+      )}
       <Btn className="w-full" onClick={next}>Next problem <ChevronRight size={15} /></Btn>
     </div>
   );
@@ -3973,7 +3986,15 @@ export default function App() {
   function setProfile(name, email) {
     commit((d) => ({ ...d, profile: { name: name.trim(), email: email.trim().toLowerCase() } }));
     cloudLoaded.current = false; // allow a fresh cloud pull for this email
-    showFlash("Joined the leaderboard!");
+    showFlash("Signed in");
+  }
+  // Sign out / switch: reset local to a clean state and show the login gate again.
+  // (Progress is synced to the cloud under the email and reloads on next sign-in.)
+  function signOut() {
+    try { window.localStorage.removeItem("gt_cloud_ts"); } catch {}
+    cloudLoaded.current = false;
+    setTab("study"); setSubview(null); setSession(null);
+    commit(() => freshData());
   }
 
   function buyItem(item) {
@@ -4203,7 +4224,8 @@ export default function App() {
 
   function setSubject(s) {
     commit((d) => ({ ...d, subject: s }));
-    setTab("study"); setSubview(null); setSession(null);
+    // stay on the current section; just leave any open subview/session for the old subject
+    setSubview(null); setSession(null);
   }
 
   // Study one module via SRS (all its cards; ratings count).
@@ -4866,9 +4888,10 @@ export default function App() {
               <h1 className="text-2xl font-bold tracking-tight"><span className="font-serif italic text-teal-700">Profile</span></h1>
               <div className="flex items-center gap-3">
                 <div className="w-14 h-14 rounded-2xl bg-teal-50 border border-teal-200 flex items-center justify-center text-3xl">{game.cosmetics.equipped.avatar || DEFAULT_AVATAR}</div>
-                <div>
-                  <div className="text-lg font-bold text-stone-800">{data.profile && data.profile.name ? data.profile.name : "You"}</div>
+                <div className="min-w-0">
+                  <div className="text-lg font-bold text-stone-800 truncate">{data.profile && data.profile.name ? data.profile.name : "You"}</div>
                   {game.cosmetics.equipped.title && <div className="text-xs font-semibold text-teal-600">{game.cosmetics.equipped.title}</div>}
+                  {data.profile && data.profile.email && <div className="text-xs text-stone-400 truncate">{data.profile.email}</div>}
                 </div>
               </div>
               <XpStrip game={game} onProfile={() => {}} />
@@ -4960,6 +4983,19 @@ export default function App() {
                   })}
                 </div>
               </div>
+
+              {/* account */}
+              <div>
+                <div className="flex items-center gap-2 mb-2.5"><span className="text-xs font-semibold uppercase tracking-wide text-stone-400">Account</span><div className="h-px flex-1 bg-stone-200" /></div>
+                <div className="rounded-2xl border border-stone-200 bg-white p-4 space-y-3">
+                  <div className="text-sm"><span className="text-stone-400">Signed in as</span> <span className="font-semibold text-stone-800">{(data.profile && data.profile.email) || "—"}</span></div>
+                  <div className="flex gap-2">
+                    <Btn onClick={signOut}><RotateCcw size={14} /> Switch account</Btn>
+                    <Btn kind="danger" onClick={signOut}>Sign out</Btn>
+                  </div>
+                  <p className="text-[11px] text-stone-400">Progress is synced to the cloud under your email and restored when you sign back in.</p>
+                </div>
+              </div>
             </div>
           );
         })()}
@@ -4975,7 +5011,7 @@ export default function App() {
             { id: "profile",  icon: Trophy,       label: "Profile",  badge: null },
             { id: "manage",   icon: Settings,     label: "Manage",   badge: null },
           ].map(({ id, icon: Icon, label, badge }) => (
-            <button key={id} onClick={() => setTab(id)}
+            <button key={id} onClick={() => { setSubview(null); setSession(null); setTab(id); }}
               className={`flex-1 flex flex-col items-center gap-1 py-3 relative transition-colors ${tab === id ? "text-teal-600" : "text-stone-400 hover:text-stone-600"}`}>
               <div className="relative">
                 <Icon size={22} />
