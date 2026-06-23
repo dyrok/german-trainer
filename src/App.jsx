@@ -760,6 +760,7 @@ function Markdown({ text, className = "" }) {
   const blocks = [];
   let i = 0;
   const isItem = (l) => /^\s*([-*+]|\d+\.)\s+/.test(l);
+  const isHr = (l) => /^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(l);
   while (i < lines.length) {
     const line = lines[i];
     if (line.trim().startsWith("```")) {
@@ -771,7 +772,7 @@ function Markdown({ text, className = "" }) {
     }
     const h = line.match(/^(#{1,6})\s+(.*)$/);
     if (h) { blocks.push(<div key={blocks.length} className="font-semibold mt-1.5 mb-0.5">{mdInline(h[2], blocks.length + "-")}</div>); i++; continue; }
-    if (/^\s*(-{3,}|\*{3,}|_{3,})\s*$/.test(line)) { blocks.push(<hr key={blocks.length} className="my-2 border-stone-200" />); i++; continue; }
+    if (isHr(line)) { blocks.push(<hr key={blocks.length} className="my-2 border-stone-200" />); i++; continue; }
     if (isItem(line)) {
       const ordered = /^\s*\d+\./.test(line); const items = [];
       while (i < lines.length && isItem(lines[i])) {
@@ -785,7 +786,7 @@ function Markdown({ text, className = "" }) {
     }
     if (line.trim() === "") { i++; continue; }
     const buf = [];
-    while (i < lines.length && lines[i].trim() !== "" && !lines[i].trim().startsWith("```") && !/^#{1,6}\s/.test(lines[i]) && !isItem(lines[i])) { buf.push(lines[i]); i++; }
+    while (i < lines.length && lines[i].trim() !== "" && !lines[i].trim().startsWith("```") && !/^#{1,6}\s/.test(lines[i]) && !isItem(lines[i]) && !isHr(lines[i])) { buf.push(lines[i]); i++; }
     blocks.push(<p key={blocks.length} className="my-1 first:mt-0 last:mb-0">{mdInline(buf.join(" "), blocks.length + "-")}</p>);
   }
   return <div className={className}>{blocks}</div>;
