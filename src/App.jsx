@@ -2578,43 +2578,87 @@ function isOnboarded() { try { return !!window.localStorage.getItem(ONBOARDED_KE
 function markOnboarded() { try { window.localStorage.setItem(ONBOARDED_KEY, "1"); } catch {} }
 
 // First-run welcome: brief intro + optional Groq key & model.
+const HOW_TO_STEPS = [
+  { icon: ArrowLeftRight, title: "Pick a subject", text: "Switch between German and React anytime with the toggle at the top." },
+  { icon: Brain, title: "Study what's due", text: "On Study, flip each card, then rate how well you knew it — Again (now), Hard (10m), Good (1h), Easy (1d). Hard cards come back sooner. Misclick? Hit Undo." },
+  { icon: Target, title: "Practice & quiz", text: "Practice has quizzes, Timed Sprints (great before a test), and every flashcard module. Open a module to flip it, see the Overview, or 'Study this module'." },
+  { icon: Plus, title: "Add your own cards", text: "In Manage, paste/type cards or let AI generate and auto-sort them into modules. Back up your progress there too." },
+  { icon: MessageCircle, title: "Ask the AI tutor", text: "Tap 'Chat about this' on any card or quiz answer, or use the Tutor tab — it can even add cards, make quizzes, and start study for you." },
+];
+
 function Onboarding({ onDone }) {
+  const [step, setStep]   = useState(0);
   const [key, setKey]     = useState(loadGroqKey);
   const [model, setModel] = useState(loadGroqModel);
   function finish() { saveGroqKey(key.trim()); saveGroqModel(model); markOnboarded(); onDone(); }
   function skip()   { saveGroqModel(model); markOnboarded(); onDone(); }
   return (
     <div className="min-h-screen bg-stone-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-md rounded-2xl border border-stone-200 bg-white p-6 space-y-4">
+      <div className="w-full max-w-md rounded-2xl border border-stone-200 bg-white p-6 space-y-4 max-h-[92vh] overflow-auto">
         <div className="flex justify-center">
           <div className="w-12 h-12 rounded-2xl bg-teal-600 text-white flex items-center justify-center"><Brain size={24} /></div>
         </div>
-        <div className="text-center">
-          <h1 className="text-2xl font-bold tracking-tight">Welcome 👋</h1>
-          <p className="text-sm text-stone-500 mt-1">A spaced-repetition trainer for <span className="font-medium text-stone-700">German</span> &amp; <span className="font-medium text-stone-700">React</span> — with AI explanations, quizzes, and a tutor.</p>
-        </div>
-        <div className="rounded-xl bg-stone-50 border border-stone-200 p-3 space-y-3">
-          <div className="flex items-center gap-1.5 text-sm font-semibold text-stone-700"><Sparkles size={14} className="text-sky-500" /> Optional: turn on AI</div>
-          <div>
-            <label className="block text-xs text-stone-400 mb-1">
-              Groq API key — <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" className="text-teal-600 hover:underline">get one free</a> · stored only on this device
-            </label>
-            <input type="password" value={key} onChange={(e) => setKey(e.target.value)} placeholder="gsk_…" autoComplete="off"
-              className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm font-mono focus:outline-none focus:border-teal-400" />
-          </div>
-          <div>
-            <label className="block text-xs text-stone-400 mb-1">AI model</label>
-            <div className="relative">
-              <select value={model} onChange={(e) => setModel(e.target.value)}
-                className="w-full appearance-none rounded-xl border border-stone-200 bg-white px-3 py-2 pr-8 text-sm focus:outline-none focus:border-teal-400">
-                {GROQ_MODELS.map((m) => <option key={m.id} value={m.id}>{m.label} — {m.sub}</option>)}
-              </select>
-              <ChevronDown size={15} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400" />
+
+        {step === 0 ? (
+          <>
+            <div className="text-center">
+              <h1 className="text-2xl font-bold tracking-tight">Welcome 👋</h1>
+              <p className="text-sm text-stone-500 mt-1">A spaced-repetition trainer for <span className="font-medium text-stone-700">German</span> &amp; <span className="font-medium text-stone-700">React</span>. Here's how to study:</p>
             </div>
-          </div>
+            <div className="space-y-2.5">
+              {HOW_TO_STEPS.map((s, i) => {
+                const Icon = s.icon;
+                return (
+                  <div key={i} className="flex gap-3 rounded-xl bg-stone-50 border border-stone-200 p-3">
+                    <div className="shrink-0 w-8 h-8 rounded-lg bg-teal-50 text-teal-700 flex items-center justify-center"><Icon size={16} /></div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-semibold text-stone-800">{i + 1}. {s.title}</div>
+                      <div className="text-xs text-stone-500 leading-relaxed mt-0.5">{s.text}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <button onClick={() => setStep(1)} className="w-full rounded-xl bg-teal-600 text-white py-3 font-semibold hover:bg-teal-700 transition-colors flex items-center justify-center gap-2">
+              Next <ChevronRight size={17} />
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="text-center">
+              <h1 className="text-2xl font-bold tracking-tight">Turn on AI</h1>
+              <p className="text-sm text-stone-500 mt-1">Optional — powers explanations, quizzes, auto-categorize, and the tutor. You can add this later in Manage.</p>
+            </div>
+            <div className="rounded-xl bg-stone-50 border border-stone-200 p-3 space-y-3">
+              <div>
+                <label className="block text-xs text-stone-400 mb-1">
+                  Groq API key — <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" className="text-teal-600 hover:underline">get one free</a> · stored only on this device
+                </label>
+                <input type="password" value={key} onChange={(e) => setKey(e.target.value)} placeholder="gsk_…" autoComplete="off"
+                  className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm font-mono focus:outline-none focus:border-teal-400" />
+              </div>
+              <div>
+                <label className="block text-xs text-stone-400 mb-1">AI model</label>
+                <div className="relative">
+                  <select value={model} onChange={(e) => setModel(e.target.value)}
+                    className="w-full appearance-none rounded-xl border border-stone-200 bg-white px-3 py-2 pr-8 text-sm focus:outline-none focus:border-teal-400">
+                    {GROQ_MODELS.map((m) => <option key={m.id} value={m.id}>{m.label} — {m.sub}</option>)}
+                  </select>
+                  <ChevronDown size={15} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400" />
+                </div>
+              </div>
+            </div>
+            <button onClick={finish} className="w-full rounded-xl bg-teal-600 text-white py-3 font-semibold hover:bg-teal-700 transition-colors">Get started</button>
+            <div className="flex items-center justify-between text-xs">
+              <button onClick={() => setStep(0)} className="text-stone-400 hover:text-stone-600 inline-flex items-center gap-1"><ArrowLeft size={13} /> Back</button>
+              <button onClick={skip} className="text-stone-400 hover:text-stone-600">Skip — add a key later</button>
+            </div>
+          </>
+        )}
+
+        <div className="flex justify-center gap-1.5 pt-1">
+          {[0, 1].map((i) => <div key={i} className={`h-1.5 rounded-full transition-all ${step === i ? "w-5 bg-teal-600" : "w-1.5 bg-stone-300"}`} />)}
         </div>
-        <button onClick={finish} className="w-full rounded-xl bg-teal-600 text-white py-3 font-semibold hover:bg-teal-700 transition-colors">Get started</button>
-        <button onClick={skip} className="w-full text-xs text-stone-400 hover:text-stone-600">Skip — I'll add a key later</button>
       </div>
     </div>
   );
