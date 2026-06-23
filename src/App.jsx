@@ -1360,6 +1360,81 @@ function FlipDrill({ deck, quizMake, onBack }) {
   );
 }
 
+/* ═══════════════════════════ MODULE VIEW + OVERVIEW ═══════════════════════════ */
+
+// Editable two-column grid of every card in a module. Click a card to edit it.
+function ModuleOverview({ cards, subjectLabel = "this subject", onEdit, onDelete }) {
+  const [editId, setEditId] = useState(null);
+  const [draft, setDraft]   = useState({ front: "", back: "" });
+
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      {cards.map((c) => {
+        const editing = editId === c.id;
+        if (editing) {
+          return (
+            <div key={c.id} className="col-span-2 rounded-xl border border-teal-300 bg-white p-3 space-y-2">
+              <textarea value={draft.front} onChange={(e) => setDraft((d) => ({ ...d, front: e.target.value }))} rows={2} placeholder="Front"
+                className="w-full rounded-lg border border-stone-200 px-2 py-1.5 text-sm focus:outline-none focus:border-teal-400" />
+              <textarea value={draft.back} onChange={(e) => setDraft((d) => ({ ...d, back: e.target.value }))} rows={2} placeholder="Back"
+                className="w-full rounded-lg border border-stone-200 px-2 py-1.5 text-sm focus:outline-none focus:border-teal-400" />
+              <AICardEdit key={"ai" + c.id} card={c} subjectLabel={subjectLabel}
+                onEdit={(fields) => { onEdit(c.id, fields); setDraft(fields); }} />
+              <div className="flex items-center gap-2">
+                <Btn kind="primary" disabled={!draft.front.trim() || !draft.back.trim()}
+                  onClick={() => { onEdit(c.id, { front: draft.front.trim(), back: draft.back.trim() }); setEditId(null); }}>
+                  <Check size={14} /> Save
+                </Btn>
+                <Btn onClick={() => setEditId(null)}>Cancel</Btn>
+                <button onClick={() => { onDelete(c.id); setEditId(null); }} className="ml-auto text-stone-300 hover:text-rose-500"><Trash2 size={15} /></button>
+              </div>
+            </div>
+          );
+        }
+        return (
+          <button key={c.id} onClick={() => { setEditId(c.id); setDraft({ front: c.front, back: c.back }); }}
+            className="text-left rounded-xl border border-stone-200 bg-white p-3 hover:border-teal-300 hover:shadow-sm transition-all min-w-0">
+            <div className="text-sm font-medium text-stone-800 break-words [overflow-wrap:anywhere] line-clamp-3">{c.front}</div>
+            <div className="mt-1 text-xs text-stone-400 break-words [overflow-wrap:anywhere] line-clamp-2">{c.back}</div>
+            <div className="mt-1.5 inline-flex items-center gap-1 text-[10px] text-stone-300"><Pencil size={10} /> tap to edit</div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+// A module's page: study/resume controls + a Flashcards (flip) / Overview toggle.
+function ModuleView({ deckName, cardObjs, savedMod, subjectLabel, onStudy, onResume, onEdit, onDelete }) {
+  const [mode, setMode] = useState("flip"); // flip | overview
+  const deckCards = cardObjs.map((c) => ({ en: c.front, de: c.back, note: c.note }));
+  return (
+    <div className="space-y-4">
+      {savedMod && (
+        <button onClick={onResume}
+          className="w-full rounded-xl bg-violet-600 text-white py-3 text-sm font-semibold hover:bg-violet-700 transition-colors flex items-center justify-center gap-2">
+          <RotateCcw size={17} /> Resume study · {savedMod.queue.length} left
+        </button>
+      )}
+      <button onClick={onStudy}
+        className="w-full rounded-xl bg-teal-600 text-white py-3 text-sm font-semibold hover:bg-teal-700 transition-colors flex items-center justify-center gap-2">
+        <Brain size={17} /> {savedMod ? "Restart module study" : "Study this module"} · {cardObjs.length} card{cardObjs.length !== 1 ? "s" : ""}
+      </button>
+
+      <div className="inline-flex rounded-xl bg-stone-200 p-1 text-sm">
+        {[["flip", "Flashcards"], ["overview", "Overview"]].map(([k, l]) => (
+          <button key={k} onClick={() => setMode(k)}
+            className={`px-3.5 py-1.5 rounded-lg font-medium transition-colors ${mode === k ? "bg-white text-stone-800 shadow-sm" : "text-stone-500"}`}>{l}</button>
+        ))}
+      </div>
+
+      {mode === "flip"
+        ? <FlipDrill deck={deckCards} />
+        : <ModuleOverview cards={cardObjs} subjectLabel={subjectLabel} onEdit={onEdit} onDelete={onDelete} />}
+    </div>
+  );
+}
+
 /* ═══════════════════════════ NUMBER TRAINER ═══════════════════════════ */
 
 function NumTrainer() {
@@ -2809,26 +2884,18 @@ export default function App() {
       const dname = subview.slice(6);
       title = dname.replace(/^React · /, "");
       const inDeck = cards.filter((c) => c.deck === dname);
-      const deckCards = inDeck.map((c) => ({ en: c.front, de: c.back, note: c.note }));
       const savedMod = data.session && data.session.subject === subject && data.session.deck === dname ? data.session : null;
-      content = deckCards.length ? (
-        <div className="space-y-4">
-          {savedMod && (
-            <button onClick={() => setSession({ resume: true, cram: savedMod.cram, deck: dname })}
-              className="w-full rounded-xl bg-violet-600 text-white py-3 text-sm font-semibold hover:bg-violet-700 transition-colors flex items-center justify-center gap-2">
-              <RotateCcw size={17} /> Resume study · {savedMod.queue.length} left
-            </button>
-          )}
-          <button onClick={() => studyModule(dname)}
-            className="w-full rounded-xl bg-teal-600 text-white py-3 text-sm font-semibold hover:bg-teal-700 transition-colors flex items-center justify-center gap-2">
-            <Brain size={17} /> {savedMod ? "Restart module study" : "Study this module"} · {inDeck.length} card{inDeck.length !== 1 ? "s" : ""}
-          </button>
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold uppercase tracking-wide text-stone-400">or flip through</span>
-            <div className="h-px flex-1 bg-stone-200" />
-          </div>
-          <FlipDrill deck={deckCards} />
-        </div>
+      content = inDeck.length ? (
+        <ModuleView
+          deckName={dname}
+          cardObjs={inDeck}
+          savedMod={savedMod}
+          subjectLabel={subjMeta.label}
+          onStudy={() => studyModule(dname)}
+          onResume={() => setSession({ resume: true, cram: savedMod.cram, deck: dname })}
+          onEdit={(id, fields) => commit((d) => ({ ...d, cards: d.cards.map((c) => c.id === id ? { ...c, ...fields } : c) }))}
+          onDelete={(id) => commit((d) => ({ ...d, cards: d.cards.filter((c) => c.id !== id) }))}
+        />
       ) : <div className="text-sm text-stone-400">This module is empty.</div>;
     }
     else if (subview === "agentquiz") { title = "AI Quiz"; content = agentQuiz && agentQuiz.length
