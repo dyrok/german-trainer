@@ -1478,13 +1478,13 @@ function parsePaste(text) {
 const GROQ_KEY   = "groq_api_key";
 const GROQ_MODEL_KEY = "groq_model";
 const GROQ_MODELS = [
-  { id: "llama-3.3-70b-versatile", label: "Llama 3.3 70B", sub: "smartest · versatile" },
+  { id: "openai/gpt-oss-120b",    label: "GPT-OSS 120B",  sub: "OpenAI open model · default" },
+  { id: "openai/gpt-oss-20b",     label: "GPT-OSS 20B",   sub: "OpenAI open model · fast" },
+  { id: "llama-3.3-70b-versatile", label: "Llama 3.3 70B", sub: "versatile" },
   { id: "llama-3.1-8b-instant",   label: "Llama 3.1 8B",  sub: "fastest · cheap" },
-  { id: "openai/gpt-oss-120b",    label: "GPT-OSS 120B",  sub: "strong reasoning" },
-  { id: "openai/gpt-oss-20b",     label: "GPT-OSS 20B",   sub: "balanced" },
   { id: "gemma2-9b-it",           label: "Gemma 2 9B",    sub: "lightweight" },
 ];
-const DEFAULT_MODEL = GROQ_MODELS[0].id;
+const DEFAULT_MODEL = "openai/gpt-oss-120b"; // ChatGPT's open-source model
 
 function loadGroqKey() {
   try { return (typeof window !== "undefined" && window.localStorage.getItem(GROQ_KEY)) || ""; }
@@ -2463,6 +2463,53 @@ const DECK_TILES = [
   { id: "deck:verbs",      label: "Verbs",       sub: "Konjugation", icon: GraduationCap,deck: "verbs"      },
 ];
 
+const ONBOARDED_KEY = "gt_onboarded_v1";
+function isOnboarded() { try { return !!window.localStorage.getItem(ONBOARDED_KEY); } catch { return true; } }
+function markOnboarded() { try { window.localStorage.setItem(ONBOARDED_KEY, "1"); } catch {} }
+
+// First-run welcome: brief intro + optional Groq key & model.
+function Onboarding({ onDone }) {
+  const [key, setKey]     = useState(loadGroqKey);
+  const [model, setModel] = useState(loadGroqModel);
+  function finish() { saveGroqKey(key.trim()); saveGroqModel(model); markOnboarded(); onDone(); }
+  function skip()   { saveGroqModel(model); markOnboarded(); onDone(); }
+  return (
+    <div className="min-h-screen bg-stone-100 flex items-center justify-center p-4">
+      <div className="w-full max-w-md rounded-2xl border border-stone-200 bg-white p-6 space-y-4">
+        <div className="flex justify-center">
+          <div className="w-12 h-12 rounded-2xl bg-teal-600 text-white flex items-center justify-center"><Brain size={24} /></div>
+        </div>
+        <div className="text-center">
+          <h1 className="text-2xl font-bold tracking-tight">Welcome 👋</h1>
+          <p className="text-sm text-stone-500 mt-1">A spaced-repetition trainer for <span className="font-medium text-stone-700">German</span> &amp; <span className="font-medium text-stone-700">React</span> — with AI explanations, quizzes, and a tutor.</p>
+        </div>
+        <div className="rounded-xl bg-stone-50 border border-stone-200 p-3 space-y-3">
+          <div className="flex items-center gap-1.5 text-sm font-semibold text-stone-700"><Sparkles size={14} className="text-sky-500" /> Optional: turn on AI</div>
+          <div>
+            <label className="block text-xs text-stone-400 mb-1">
+              Groq API key — <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" className="text-teal-600 hover:underline">get one free</a> · stored only on this device
+            </label>
+            <input type="password" value={key} onChange={(e) => setKey(e.target.value)} placeholder="gsk_…" autoComplete="off"
+              className="w-full rounded-xl border border-stone-200 px-3 py-2 text-sm font-mono focus:outline-none focus:border-teal-400" />
+          </div>
+          <div>
+            <label className="block text-xs text-stone-400 mb-1">AI model</label>
+            <div className="relative">
+              <select value={model} onChange={(e) => setModel(e.target.value)}
+                className="w-full appearance-none rounded-xl border border-stone-200 bg-white px-3 py-2 pr-8 text-sm focus:outline-none focus:border-teal-400">
+                {GROQ_MODELS.map((m) => <option key={m.id} value={m.id}>{m.label} — {m.sub}</option>)}
+              </select>
+              <ChevronDown size={15} className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-stone-400" />
+            </div>
+          </div>
+        </div>
+        <button onClick={finish} className="w-full rounded-xl bg-teal-600 text-white py-3 font-semibold hover:bg-teal-700 transition-colors">Get started</button>
+        <button onClick={skip} className="w-full text-xs text-stone-400 hover:text-stone-600">Skip — I'll add a key later</button>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [data,     setData]     = useState(null);
   const [tab,      setTab]      = useState("study");   // study | practice | manage
@@ -2472,6 +2519,8 @@ export default function App() {
   const [flash,    setFlash]    = useState("");
   const [persistent, setPersistent] = useState(true);
   const [dark, setDark] = useState(false);
+  const [onboarded, setOnboarded] = useState(isOnboarded);
+  const [installPrompt, setInstallPrompt] = useState(null); // captured beforeinstallprompt event
 
   // Inject CSS once into <head>
   useEffect(() => {
@@ -2558,6 +2607,22 @@ export default function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, [session, subview, tab]);
 
+  // Capture the install prompt so we can offer an in-app "Install app" button.
+  useEffect(() => {
+    function onPrompt(e) { e.preventDefault(); setInstallPrompt(e); }
+    function onInstalled() { setInstallPrompt(null); }
+    window.addEventListener("beforeinstallprompt", onPrompt);
+    window.addEventListener("appinstalled", onInstalled);
+    return () => { window.removeEventListener("beforeinstallprompt", onPrompt); window.removeEventListener("appinstalled", onInstalled); };
+  }, []);
+
+  async function installApp() {
+    if (!installPrompt) return;
+    installPrompt.prompt();
+    try { await installPrompt.userChoice; } catch {}
+    setInstallPrompt(null);
+  }
+
   // Browser/hardware Back button: unwind in-app navigation instead of leaving the site.
   useEffect(() => {
     const deep = !!(session || subview || tab !== "study");
@@ -2575,6 +2640,10 @@ export default function App() {
     window.addEventListener("popstate", onPop);
     return () => window.removeEventListener("popstate", onPop);
   }, [session, subview, tab]);
+
+  if (!onboarded) {
+    return <Onboarding onDone={() => setOnboarded(true)} />;
+  }
 
   if (!data) {
     return (
@@ -3064,6 +3133,20 @@ export default function App() {
                 <p className="text-[11px] text-stone-400">Restoring replaces your current progress with the backup's.</p>
               </div>
             </div>
+
+            {installPrompt && (
+              <div>
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-stone-400">Install</span>
+                  <div className="h-px flex-1 bg-stone-200" />
+                </div>
+                <div className="rounded-2xl border border-stone-200 bg-white px-4 py-3 space-y-3">
+                  <div className="flex items-center gap-1.5 text-sm font-semibold text-stone-700"><Download size={14} className="text-teal-600" /> Install as an app</div>
+                  <p className="text-xs text-stone-400 leading-relaxed">Add the trainer to your home screen / desktop for a full-screen, offline-capable app.</p>
+                  <Btn kind="primary" onClick={installApp}><Download size={15} /> Install app</Btn>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
