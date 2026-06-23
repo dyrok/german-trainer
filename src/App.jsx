@@ -471,24 +471,21 @@ function newCard(front, back, deck, note, id, subject = "german") {
     ease: 2.5, interval: 0, reps: 0, lapses: 0, due: 0, state: "new", created: Date.now() };
 }
 
+// Fixed review steps (in ms): Again = now, Hard = 10 min, Good = 1 hr, Easy = 1 day.
+const STEP_MS = { again: 0, hard: 10 * 60000, good: 60 * 60000, easy: DAY };
+
 function schedule(card, rating) {
-  let { ease, interval, reps, lapses } = card;
-  if (rating === "again") {
-    reps = 0; lapses += 1; ease = Math.max(MIN_EASE, r2(ease - 0.2)); interval = 0;
-  } else {
+  let { ease, reps, lapses } = card;
+  if (rating === "again") { reps = 0; lapses += 1; ease = Math.max(MIN_EASE, r2(ease - 0.2)); }
+  else {
     if (rating === "hard") ease = Math.max(MIN_EASE, r2(ease - 0.15));
     if (rating === "easy") ease = r2(ease + 0.15);
-    let next;
-    if (reps === 0)      next = rating === "easy" ? 4 : 1;
-    else if (reps === 1) next = rating === "hard" ? 3 : rating === "easy" ? 8 : 6;
-    else {
-      const f = rating === "hard" ? 1.2 : rating === "easy" ? ease * 1.3 : ease;
-      next = Math.max(interval + 1, Math.round(interval * f));
-    }
-    interval = next; reps += 1;
+    reps += 1;
   }
-  const state = rating === "again" ? "learning" : reps >= 1 ? "review" : "learning";
-  const due   = interval === 0 ? Date.now() : Date.now() + interval * DAY;
+  const ms = STEP_MS[rating] ?? 0;
+  const interval = ms / DAY; // days (fractional for sub-day steps)
+  const state = rating === "again" ? "learning" : reps >= 2 ? "review" : "learning";
+  const due = Date.now() + ms;
   return { ...card, ease: r2(ease), interval, reps, lapses, state, due };
 }
 
@@ -496,7 +493,11 @@ function prevInt(card, rating) { return schedule(card, rating).interval; }
 
 function fmtInt(days) {
   if (days <= 0) return "now";
-  if (days < 30) return Math.round(days) + "d";
+  const mins = days * 1440;
+  if (mins < 60)  return Math.round(mins) + "m";
+  const hrs = days * 24;
+  if (hrs < 24)   return Math.round(hrs) + "h";
+  if (days < 30)  return Math.round(days) + "d";
   if (days < 365) return Math.round(days / 30) + "mo";
   return (days / 365).toFixed(1) + "y";
 }
@@ -2480,8 +2481,8 @@ export default function App() {
 
             {/* SRS hint */}
             <div className="rounded-xl bg-stone-50 border border-stone-200 p-3 text-xs text-stone-500 space-y-1 leading-relaxed">
-              <div><span className="font-semibold text-stone-700">Again</span> → back in minutes · <span className="font-semibold text-stone-700">Hard</span> → shorter interval · <span className="font-semibold text-stone-700">Good</span> → scheduled normally · <span className="font-semibold text-stone-700">Easy</span> → bigger jump</div>
-              <div>Each card's interval grows with every correct recall. That's spaced repetition.</div>
+              <div><span className="font-semibold text-stone-700">Again</span> → now · <span className="font-semibold text-stone-700">Hard</span> → 10 min · <span className="font-semibold text-stone-700">Good</span> → 1 hour · <span className="font-semibold text-stone-700">Easy</span> → 1 day</div>
+              <div>Cards come back after the time you pick — quick, fixed steps for fast review.</div>
             </div>
 
             {!persistent && (
