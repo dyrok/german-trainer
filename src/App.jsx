@@ -2667,6 +2667,56 @@ function genSortFrames(algo, src) {
 }
 
 const SORT_ALGOS = [["bubble", "Bubble"], ["selection", "Selection"], ["insertion", "Insertion"], ["merge", "Merge"]];
+
+// Collapsible "how it works" panel shared by every visualizer.
+function VizNote({ title = "How it works", children, defaultOpen = true }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="rounded-2xl border border-teal-100 bg-teal-50/40 overflow-hidden">
+      <button type="button" onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between px-3.5 py-2.5 text-left">
+        <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-teal-800"><Lightbulb size={15} /> {title}</span>
+        <ChevronDown size={16} className={`text-teal-500 transition-transform ${open ? "rotate-180" : ""}`} />
+      </button>
+      {open && <div className="px-3.5 pb-3.5 text-sm text-stone-600 space-y-2 leading-relaxed">{children}</div>}
+    </div>
+  );
+}
+// Small complexity/property chips used inside the explainers.
+function VizFacts({ items }) {
+  return (
+    <div className="flex flex-wrap gap-1.5 pt-0.5">
+      {items.map(([label, val], k) => (
+        <span key={k} className="inline-flex items-center gap-1 rounded-full bg-white border border-stone-200 px-2 py-0.5 text-[11px] text-stone-600">
+          <span className="text-stone-400">{label}</span> <span className="font-mono font-semibold text-stone-700">{val}</span>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+const SORT_EXPLAIN = {
+  bubble: {
+    how: "Walk the list comparing each adjacent pair and swapping them if they're out of order. After each full pass the largest remaining value has “bubbled” to the end, so the sorted zone grows from the right.",
+    facts: [["best", "O(n)"], ["avg/worst", "O(n²)"], ["space", "O(1)"], ["stable", "yes"]],
+    when: "Almost never in practice — it's a teaching algorithm. Only okay for tiny or already-sorted lists.",
+  },
+  selection: {
+    how: "Scan the unsorted part to find the smallest element, then swap it into the next sorted slot. Repeat, growing the sorted zone from the left one element per pass.",
+    facts: [["best/worst", "O(n²)"], ["space", "O(1)"], ["swaps", "O(n)"], ["stable", "no"]],
+    when: "When writes are expensive — it makes at most n swaps, the fewest of the simple sorts.",
+  },
+  insertion: {
+    how: "Take each new element and slide it left past everything larger until it lands in its correct spot — like sorting a hand of playing cards. The left side stays sorted the whole time.",
+    facts: [["best", "O(n)"], ["worst", "O(n²)"], ["space", "O(1)"], ["stable", "yes"]],
+    when: "Great for small or nearly-sorted data; it's the fallback real libraries switch to for tiny sub-arrays.",
+  },
+  merge: {
+    how: "Divide and conquer: split the array in half, sort each half recursively, then merge the two sorted halves by repeatedly taking the smaller front element. Splitting bottoms out at single elements (already sorted).",
+    facts: [["best/worst", "O(n log n)"], ["space", "O(n)"], ["stable", "yes"]],
+    when: "When you need guaranteed O(n log n) and stability — e.g. sorting linked lists or external/huge data.",
+  },
+};
 const SORT_STEP = 42, SORT_BARW = 32, SORT_H = 200;
 
 function SortingViz() {
@@ -2720,6 +2770,13 @@ function SortingViz() {
         <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-rose-400" /> swapping</span>
         <span className="inline-flex items-center gap-1"><span className="w-3 h-3 rounded bg-emerald-400" /> sorted</span>
       </div>
+      {SORT_EXPLAIN[algo] && (
+        <VizNote title={`${SORT_ALGOS.find(([k]) => k === algo)?.[1]} Sort — how it works`}>
+          <p>{SORT_EXPLAIN[algo].how}</p>
+          <VizFacts items={SORT_EXPLAIN[algo].facts} />
+          <p className="text-stone-500"><span className="font-semibold text-stone-600">When to use:</span> {SORT_EXPLAIN[algo].when}</p>
+        </VizNote>
+      )}
     </div>
   );
 }
@@ -2769,6 +2826,11 @@ function SearchViz() {
         onPlay={() => setPlaying((p) => !p)} onStep={() => setI((x) => Math.min(frames.length - 1, x + 1))}
         onReset={() => { const a = randArr(10, 40).sort((x, y) => x - y); setData({ arr: a, target: a[Math.floor(Math.random() * a.length)] }); }}
         info={`Step ${i + 1}/${frames.length}`} />
+      <VizNote title="Binary search — how it works">
+        <p>The array <span className="font-semibold">must be sorted</span>. Look at the middle element: if it equals the target you're done; if the target is larger, the answer can only be in the right half, so discard the left half (and vice-versa). Each step throws away half of what's left.</p>
+        <p>That halving is why it's so fast: 1,000,000 items take only ~20 comparisons. A linear scan would take up to a million.</p>
+        <VizFacts items={[["best", "O(1)"], ["avg/worst", "O(log n)"], ["space", "O(1)"], ["requires", "sorted"]]} />
+      </VizNote>
     </div>
   );
 }
@@ -2848,7 +2910,17 @@ function BSTViz() {
       {output.length > 0 && (
         <div className="rounded-xl bg-stone-50 border border-stone-200 p-3 text-sm font-mono text-teal-700">{output.join(" → ")}</div>
       )}
-      <p className="text-xs text-stone-400">In-order traversal of a BST visits keys in sorted ascending order.</p>
+      <VizNote title="Binary Search Trees — how they work">
+        <p>Every node obeys one rule: <span className="font-semibold">everything in its left subtree is smaller, everything in its right subtree is larger</span>. To insert or find a value you start at the root and go left or right by comparing — so searches cost O(height).</p>
+        <p><span className="font-semibold">Traversals</span> visit every node in a fixed order:</p>
+        <ul className="list-disc pl-5 space-y-0.5 text-stone-500">
+          <li><span className="font-semibold text-stone-600">In-order</span> (left → node → right) → keys come out <span className="font-semibold">sorted ascending</span>.</li>
+          <li><span className="font-semibold text-stone-600">Pre-order</span> (node → left → right) → used to copy/serialize a tree.</li>
+          <li><span className="font-semibold text-stone-600">Post-order</span> (left → right → node) → used to delete/free a tree safely.</li>
+        </ul>
+        <VizFacts items={[["search (balanced)", "O(log n)"], ["search (skewed)", "O(n)"], ["space", "O(n)"]]} />
+        <p className="text-stone-500">Insert sorted values and the tree degrades into a list (O(n)) — that's why self-balancing trees (AVL, Red-Black) exist.</p>
+      </VizNote>
     </div>
   );
 }
@@ -2895,7 +2967,19 @@ function StackQueueViz() {
         <Btn kind="primary" onClick={push}><Plus size={15} /> {mode === "stack" ? "Push" : "Enqueue"} {n}</Btn>
         <Btn onClick={mode === "stack" ? pop : dequeue} disabled={!items.length}>{mode === "stack" ? "Pop (top)" : "Dequeue (front)"}</Btn>
       </div>
-      <p className="text-xs text-stone-400">{mode === "stack" ? "LIFO — the last item pushed is the first popped." : "FIFO — the first item enqueued is the first dequeued."}</p>
+      {mode === "stack" ? (
+        <VizNote title="Stack — how it works">
+          <p>A stack is <span className="font-semibold">LIFO — Last In, First Out</span>. You only ever touch the top: <span className="font-mono">push</span> adds on top, <span className="font-mono">pop</span> removes the top. Like a stack of plates — the last one you put down is the first you pick up.</p>
+          <p className="text-stone-500"><span className="font-semibold text-stone-600">Used for:</span> undo/redo, the call stack that runs your functions, browser back button, expression evaluation, and depth-first search.</p>
+          <VizFacts items={[["push", "O(1)"], ["pop", "O(1)"], ["peek", "O(1)"]]} />
+        </VizNote>
+      ) : (
+        <VizNote title="Queue — how it works">
+          <p>A queue is <span className="font-semibold">FIFO — First In, First Out</span>. You add at the <span className="font-semibold">rear</span> (<span className="font-mono">enqueue</span>) and remove from the <span className="font-semibold">front</span> (<span className="font-mono">dequeue</span>). Like a line at a counter — first to arrive is first served.</p>
+          <p className="text-stone-500"><span className="font-semibold text-stone-600">Used for:</span> task/print scheduling, message buffers, and breadth-first search.</p>
+          <VizFacts items={[["enqueue", "O(1)"], ["dequeue", "O(1)"], ["peek", "O(1)"]]} />
+        </VizNote>
+      )}
     </div>
   );
 }
@@ -2932,7 +3016,12 @@ function LinkedListViz() {
         <Btn onClick={() => setNodes((ns) => ns.slice(1))} disabled={!nodes.length}>Delete head</Btn>
         <Btn onClick={() => setNodes((ns) => ns.slice(0, -1))} disabled={!nodes.length}>Delete tail</Btn>
       </div>
-      <p className="text-xs text-stone-400">Each node stores a value and a pointer to the next. Insert/delete at the head is O(1) — just relink pointers, no shifting like an array.</p>
+      <VizNote title="Linked lists — how they work">
+        <p>A linked list is a chain of <span className="font-semibold">nodes</span>; each node holds a value plus a <span className="font-semibold">pointer to the next</span> node. The list knows only its <span className="font-semibold">head</span>; the last node points to <span className="font-mono">null</span>.</p>
+        <p>Inserting or deleting just <span className="font-semibold">relinks pointers</span> — no shifting of elements like an array needs. The trade-off: there's no indexing, so reaching the k-th node means walking from the head.</p>
+        <VizFacts items={[["insert/delete head", "O(1)"], ["access by index", "O(n)"], ["search", "O(n)"]]} />
+        <p className="text-stone-500"><span className="font-semibold text-stone-600">Array vs list:</span> arrays win at random access (O(1)); lists win at frequent insertion/deletion without resizing or shifting.</p>
+      </VizNote>
     </div>
   );
 }
@@ -2976,7 +3065,16 @@ function ComplexityViz() {
           </div>
         ))}
       </div>
-      <p className="text-xs text-stone-400">Drag n and watch how each complexity class grows. O(n²) explodes; O(log n) barely moves.</p>
+      <VizNote title="Big-O notation — how to read it">
+        <p>Big-O describes <span className="font-semibold">how an algorithm's work grows as the input n grows</span> — not its exact speed. Constants are dropped, so we care about the shape of the curve, not the number of operations.</p>
+        <p>Drag <span className="font-mono">n</span> above and watch the dots climb. As n gets large the curves separate dramatically:</p>
+        <ul className="list-disc pl-5 space-y-0.5 text-stone-500">
+          <li><span className="font-mono text-stone-600">O(1)</span> / <span className="font-mono text-stone-600">O(log n)</span> — flat or barely rising. Excellent (hash lookup, binary search).</li>
+          <li><span className="font-mono text-stone-600">O(n)</span> / <span className="font-mono text-stone-600">O(n log n)</span> — gentle. Good (a scan, a good sort).</li>
+          <li><span className="font-mono text-stone-600">O(n²)</span> — explodes. Avoid for large n (nested loops, bubble sort).</li>
+        </ul>
+        <p className="text-stone-500">Rule of thumb: doubling n roughly doubles O(n) work but <span className="font-semibold">quadruples</span> O(n²) work.</p>
+      </VizNote>
     </div>
   );
 }
