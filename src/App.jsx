@@ -1087,7 +1087,7 @@ function SRSSession({ cards, maxNew = 20, cram = false, studyAll = false, initia
               [{ role: "user", content:
                 `You are a concise ${subjectLabel} tutor. Briefly explain this flashcard in 2-3 sentences so it sticks.\n` +
                 `Front: ${card.front}\nBack: ${card.back}` + (card.note ? `\nNote: ${card.note}` : "") +
-                "\nPlain text, no markdown headers."
+                "\nAlways write the explanation in English (you may quote German words/phrases). Plain text, no markdown headers."
               }],
               { temperature: 0.3, max_tokens: 320 },
             )} />
@@ -1490,7 +1490,7 @@ async function explainAnswer({ prompt, options, answer, picked }, subjectLabel) 
       `Correct answer: ${answer}\nStudent picked: ${picked}\n` +
       "In 2-3 short sentences, explain why the correct answer is right" +
       (picked && picked !== answer ? " and why the student's choice is wrong." : ".") +
-      " Plain text, no markdown headers."
+      " Always write the explanation in English (you may quote German words/phrases). Plain text, no markdown headers."
     }],
     { temperature: 0.3, max_tokens: 320 },
   );
