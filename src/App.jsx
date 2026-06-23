@@ -1263,6 +1263,38 @@ function Exam({ make, sectioned, onReview, subjectLabel = "this subject", timeLi
 
 /* ═══════════════════════════ SRS SESSION ═══════════════════════════ */
 
+const STUDY_TOUR_KEY = "gt_study_tour_v1";
+function studyTourDone() { try { return !!window.localStorage.getItem(STUDY_TOUR_KEY); } catch { return false; } }
+function markStudyTourDone() { try { window.localStorage.setItem(STUDY_TOUR_KEY, "1"); } catch {} }
+
+// One-time in-session coachmark explaining the four rating buttons (in the user's words).
+const RATING_GUIDE = [
+  { tone: "again", label: "Again", desc: "Didn't know it / got it wrong 🙈" },
+  { tone: "hard",  label: "Hard",  desc: "Knew it, but it was hard to recall" },
+  { tone: "good",  label: "Good",  desc: "Recalled it — okay-ish 👍" },
+  { tone: "easy",  label: "Easy",  desc: "Halwa question 🍮 — too easy" },
+];
+const GUIDE_DOT = { again: "bg-rose-500", hard: "bg-orange-500", good: "bg-teal-600", easy: "bg-sky-500" };
+function RatingGuide({ onDismiss }) {
+  return (
+    <div className="rounded-xl border border-teal-300 bg-teal-50 p-3 text-sm">
+      <div className="flex items-center justify-between mb-2">
+        <span className="font-semibold text-teal-800 inline-flex items-center gap-1.5"><Lightbulb size={15} /> How to rate</span>
+        <button onClick={onDismiss} className="text-xs text-teal-700 hover:text-teal-900 font-medium">Got it ✕</button>
+      </div>
+      <p className="text-xs text-stone-600 mb-2">You answered it in your head — now tell the app how it went. It schedules the card based on your honesty:</p>
+      <div className="space-y-1.5">
+        {RATING_GUIDE.map((r) => (
+          <div key={r.tone} className="flex items-start gap-2">
+            <span className={`mt-1.5 w-2 h-2 rounded-full shrink-0 ${GUIDE_DOT[r.tone]}`} />
+            <div className="text-xs text-stone-700"><span className="font-semibold">{r.label}</span> — {r.desc}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function SRSSession({ cards, maxNew = 20, cram = false, studyAll = false, initialQueue = null, initialDone = 0, onRate, onEnd, onProgress, onEditCard, onUndo, subjectLabel = "this subject" }) {
   function buildQueue() {
     if (initialQueue) return initialQueue.filter((id) => cards.some((c) => c.id === id));
@@ -1277,6 +1309,7 @@ function SRSSession({ cards, maxNew = 20, cram = false, studyAll = false, initia
   const [flipped, setFlipped] = useState(false);
   const [done,    setDone]    = useState(initialDone);
   const [lastAction, setLastAction] = useState(null); // snapshot for undo
+  const [showGuide, setShowGuide] = useState(() => !studyTourDone()); // first-run rating walkthrough
 
   // report progress so the session can be saved/resumed
   useEffect(() => { onProgress && onProgress(queue, done, cram); }, [queue, done]);
@@ -1386,6 +1419,7 @@ function SRSSession({ cards, maxNew = 20, cram = false, studyAll = false, initia
             <AICardEdit key={"edit" + card.id} card={card} subjectLabel={subjectLabel}
               onEdit={(fields) => onEditCard(card.id, fields)} />
           )}
+          {showGuide && <RatingGuide onDismiss={() => { setShowGuide(false); markStudyTourDone(); }} />}
           <div className="flex gap-2">
             <RatingBtn tone="again" label="Again" sub={fmtInt(prevInt(card, "again"))} onClick={() => rate("again")} />
             <RatingBtn tone="hard"  label="Hard"  sub={fmtInt(prevInt(card, "hard"))}  onClick={() => rate("hard")} />
@@ -3644,6 +3678,9 @@ export default function App() {
               <div><kbd className="rounded border border-stone-300 bg-white px-1">Esc</kbd> / Back to exit</div>
             </div>
           </div>
+          <Btn onClick={() => { try { window.localStorage.removeItem(STUDY_TOUR_KEY); } catch {} showFlash("Walkthrough will show on your next study session"); }}>
+            <RotateCcw size={14} /> Replay study walkthrough
+          </Btn>
           <p className="text-xs text-stone-400">Tip: AI features (explanations, quizzes, tutor, auto-categorize) need a free Groq key — add it in Manage → AI settings.</p>
         </div>
       );
