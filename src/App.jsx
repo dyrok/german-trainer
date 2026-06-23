@@ -2403,6 +2403,17 @@ export default function App() {
   const deckCounts = cards.reduce((m, c) => { m[c.deck] = (m[c.deck] || 0) + 1; return m; }, {});
   const subjectDecks = Object.keys(deckCounts).sort();
   const now = Date.now();
+  // cards "to study" per deck = new (unlearned) or due for review
+  const deckToStudy = cards.reduce((m, c) => {
+    if (c.state === "new" || c.due <= now) m[c.deck] = (m[c.deck] || 0) + 1;
+    return m;
+  }, {});
+  const moduleSub = (d) => {
+    const total = deckCounts[d], todo = deckToStudy[d] || 0;
+    return todo > 0
+      ? <span><span className="text-teal-600 font-semibold">{todo} to study</span> · {total}</span>
+      : <span>{total} cards · <span className="text-emerald-600">done</span></span>;
+  };
   const reviewDue = cards.filter((c) => c.state !== "new" && c.due <= now).length;
   const newAvail  = Math.min(
     Math.max(0, settings.newPerDay - data.daily.newDone),
@@ -2734,7 +2745,7 @@ export default function App() {
               </div>
               <div className="grid grid-cols-2 gap-2.5">
                 {subjectDecks.map((d) => (
-                  <Tile key={d} label={d.replace(/^React · /, "")} sub={`${deckCounts[d]} card${deckCounts[d] !== 1 ? "s" : ""}`} icon={Layers} onClick={() => setSubview("cards:" + d)} />
+                  <Tile key={d} label={d.replace(/^React · /, "")} sub={moduleSub(d)} icon={Layers} onClick={() => setSubview("cards:" + d)} />
                 ))}
               </div>
             </div>
@@ -2772,7 +2783,7 @@ export default function App() {
               </div>
               <div className="grid grid-cols-2 gap-2.5">
                 {subjectDecks.map((d) => (
-                  <Tile key={d} label={d} sub={`${deckCounts[d]} card${deckCounts[d] !== 1 ? "s" : ""}`} icon={Layers} onClick={() => setSubview("cards:" + d)} />
+                  <Tile key={d} label={d} sub={moduleSub(d)} icon={Layers} onClick={() => setSubview("cards:" + d)} />
                 ))}
               </div>
             </div>
