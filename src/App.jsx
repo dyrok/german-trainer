@@ -487,7 +487,7 @@ function playSfx(type) {
 function freshData() {
   return { v: 2, subject: "german", cards: seedAll(),
     settings: { newPerDay: 20 }, daily: { day: todayStr(), newDone: 0 }, streak: { count: 0, lastDay: null }, session: null,
-    game: defaultGame(), profile: { name: "", email: "" }, aptSolved: {} };
+    game: defaultGame(), profile: { name: "", email: "" }, aptSolved: {}, savedQuizzes: [] };
 }
 
 // Upgrade older saved data: tag legacy cards german, merge new seed cards, ensure game/profile.
@@ -505,7 +505,7 @@ function migrate(d) {
         flags: { ...(d.game.flags || {}) } }
     : dg;
   return { ...d, v: 2, subject: d.subject || "german", cards, streak: d.streak || { count: 0, lastDay: null }, session: d.session || null,
-    game, profile: d.profile || { name: "", email: "" }, aptSolved: d.aptSolved || {} };
+    game, profile: d.profile || { name: "", email: "" }, aptSolved: d.aptSolved || {}, savedQuizzes: d.savedQuizzes || [] };
 }
 
 // Build a randomized quiz in Exam format from a {q,o,c} bank (options shuffled each round)
@@ -1789,6 +1789,53 @@ async function callAIQuiz(topic, apiKey, n = 8) {
     .filter((x) => x.options.includes(x.answer));
 }
 
+// Build a subject's "course map": { chapter -> [study material strings] }, generic
+// across subjects (and future ones — any subject with module cards or user decks).
+function subjectCourse(subject, userCards = []) {
+  const byCh = {};
+  const add = (cat, text) => { if (!cat || !text) return; (byCh[cat] = byCh[cat] || []).push(text); };
+  if (subject === "aptitude") {
+    APTITUDE_MODULE_CARDS.forEach(([c, q, a]) => add(c, `${q} — ${a}`));
+    APTITUDE_PROBLEMS.forEach((p) => add(p.topic, `${qPreview(p.q)} (answer: ${p.answer})`));
+  } else {
+    const reg = { react: REACT_MODULE_CARDS, dsa: DSA_MODULE_CARDS }[subject] || [];
+    reg.forEach(([c, q, a]) => add(c, `${q} — ${a}`));
+  }
+  // Fold in the user's own cards (covers German and any custom decks/subjects).
+  userCards.forEach((c) => add(c.deck || "General", `${c.front} — ${c.back}`));
+  return byCh;
+}
+
+// Generate a quiz that spans several chapters — perChapter questions each, balanced.
+async function callAICourseQuiz(subjectLabel, course, chapters, perChapter = 2) {
+  const blocks = chapters.map((ch) => {
+    const mat = (course[ch] || []).slice(0, 12).join("\n");
+    return `### Chapter: ${ch}\n${mat}`;
+  }).join("\n\n");
+  const txt = await groqChat(
+    [{ role: "user", content:
+      `Create one balanced multiple-choice ${subjectLabel} quiz that covers ALL of the chapters below. ` +
+      `Write EXACTLY ${perChapter} question(s) for EACH chapter, drawn from that chapter's material, testing its key concept(s).\n` +
+      `Return ONLY JSON: {"questions":[{"chapter":"<chapter name>","prompt":"...","options":["a","b","c","d"],"answer":"<exact text of correct option>","explain":"one short sentence"}]}.\n` +
+      `Exactly 4 options each; 'answer' must be identical to one option. No markdown, no backticks.\n\n` +
+      `CHAPTERS & MATERIAL:\n${blocks}`
+    }],
+    { json: true, temperature: 0.5, max_tokens: 4096 },
+  );
+  const parsed = JSON.parse(stripFences(txt));
+  const arr = Array.isArray(parsed) ? parsed : (parsed.questions || []);
+  return arr
+    .filter((x) => x.prompt && Array.isArray(x.options) && x.options.length >= 2 && x.answer)
+    .map((x) => ({
+      section: x.chapter ? String(x.chapter) : subjectLabel,
+      prompt: String(x.prompt),
+      options: shuffle(x.options.map(String)),
+      answer: String(x.answer),
+      explain: x.explain ? String(x.explain) : undefined,
+    }))
+    .filter((x) => x.options.includes(x.answer));
+}
+
 // Explain a single MCQ answer
 async function explainAnswer({ prompt, options, answer, picked }, subjectLabel) {
   return groqChat(
@@ -2313,9 +2360,10 @@ const AGENT_TOOLS = [
   { type: "function", function: { name: "edit_card", description: "Edit a flashcard's front and/or back by id (get the id from list_cards).", parameters: { type: "object", properties: { id: { type: "string" }, front: { type: "string" }, back: { type: "string" } }, required: ["id"] } } },
   { type: "function", function: { name: "delete_card", description: "Delete a flashcard by id.", parameters: { type: "object", properties: { id: { type: "string" } }, required: ["id"] } } },
   { type: "function", function: { name: "set_new_per_day", description: "Set how many new cards are introduced per day.", parameters: { type: "object", properties: { count: { type: "number" } }, required: ["count"] } } },
-  { type: "function", function: { name: "switch_subject", description: "Switch the active subject.", parameters: { type: "object", properties: { subject: { type: "string", enum: ["german", "react"] } }, required: ["subject"] } } },
+  { type: "function", function: { name: "switch_subject", description: "Switch the active subject.", parameters: { type: "object", properties: { subject: { type: "string", enum: ["german", "react", "dsa", "aptitude"] } }, required: ["subject"] } } },
   { type: "function", function: { name: "start_study", description: "Start a study session. mode 'due' studies scheduled cards; mode 'cram' practices all cards (great before a test).", parameters: { type: "object", properties: { mode: { type: "string", enum: ["due", "cram"] } }, required: ["mode"] } } },
-  { type: "function", function: { name: "create_quiz", description: "Generate and open a multiple-choice quiz on a topic for the active subject.", parameters: { type: "object", properties: { topic: { type: "string" }, count: { type: "number", description: "number of questions, default 8" } }, required: ["topic"] } } },
+  { type: "function", function: { name: "list_chapters", description: "List the chapters/topics of the active subject. Call this first when the user wants a quiz that covers everything, so you know what chapters exist.", parameters: { type: "object", properties: {} } } },
+  { type: "function", function: { name: "create_quiz", description: "Generate and open a multiple-choice quiz for the active subject. For a focused quiz pass 'topic'. To cover the whole syllabus, set allChapters:true (or pass specific 'chapters'); 'perChapter' controls how many questions per chapter (1-3, default 2). Set save:true with a 'name' to store it in the user's Saved Quizzes so they can retake it later.", parameters: { type: "object", properties: { topic: { type: "string", description: "single topic/notes for a focused quiz" }, chapters: { type: "array", items: { type: "string" }, description: "specific chapters to cover" }, allChapters: { type: "boolean", description: "cover every chapter of the subject" }, perChapter: { type: "number", description: "questions per chapter, default 2" }, count: { type: "number", description: "questions for a single-topic quiz, default 8" }, save: { type: "boolean", description: "save to Saved Quizzes" }, name: { type: "string", description: "name for the saved quiz" } } } } },
   { type: "function", function: { name: "reset_progress", description: "Reset all spaced-repetition progress for the active subject (cards become new again). Use only when the user clearly asks.", parameters: { type: "object", properties: {} } } },
 ];
 
@@ -2340,11 +2388,29 @@ function AgentChat({ subjectLabel = "this subject", actions, messages, setMessag
       case "reset_progress": return a.resetProgress ? a.resetProgress() : { error: "unavailable" };
       case "switch_subject": setNav(() => a.switchSubject && a.switchSubject(args.subject)); return { ok: true, note: "switching after reply" };
       case "start_study":    setNav(() => a.startStudy && a.startStudy(args.mode)); return { ok: true, note: "starting session after reply" };
+      case "list_chapters":  return a.getCourse ? { chapters: Object.keys(a.getCourse()) } : { error: "unavailable" };
       case "create_quiz": {
-        const qs = await callAIQuiz(args.topic, undefined, args.count || 8);
-        if (!qs.length) return { error: "could not generate a quiz on that topic" };
+        const wantsAll = args.allChapters || (Array.isArray(args.chapters) && args.chapters.length);
+        let qs;
+        if (wantsAll) {
+          const course = a.getCourse ? a.getCourse() : {};
+          const all = Object.keys(course);
+          const chapters = (Array.isArray(args.chapters) && args.chapters.length ? args.chapters : all).filter((c) => course[c]);
+          if (!chapters.length) return { error: "no chapters found for this subject" };
+          const per = Math.min(3, Math.max(1, Math.round(args.perChapter || 2)));
+          qs = await callAICourseQuiz(subjectLabel, course, chapters, per);
+        } else {
+          qs = await callAIQuiz(args.topic || subjectLabel, undefined, args.count || 8);
+        }
+        if (!qs || !qs.length) return { error: "could not generate a quiz" };
+        let savedNote = "";
+        if (args.save && a.saveQuiz) {
+          const nm = String(args.name || (wantsAll ? `${subjectLabel} — all chapters` : args.topic || `${subjectLabel} quiz`)).slice(0, 60);
+          a.saveQuiz(nm, qs);
+          savedNote = ` Saved to Saved Quizzes as “${nm}”.`;
+        }
         setNav(() => a.playQuiz && a.playQuiz(qs));
-        return { ok: true, generated: qs.length, note: "opening quiz after reply" };
+        return { ok: true, generated: qs.length, covered: wantsAll ? "all chapters" : (args.topic || "topic"), saved: !!args.save, note: "Opening the quiz after this reply." + savedNote };
       }
       default: return { error: "unknown tool" };
     }
@@ -2359,7 +2425,7 @@ function AgentChat({ subjectLabel = "this subject", actions, messages, setMessag
     try {
       const sys = { role: "system", content:
         `You are a friendly, concise ${subjectLabel} tutor inside a study app.` +
-        (actions ? " You can also take actions with the provided tools — when asked to add/edit/delete cards, start studying or cramming, make a quiz, switch subject, or change settings, DO IT with the right tool. Use list_cards for ids before editing/deleting." : "") +
+        (actions ? " You can also take actions with the provided tools — when asked to add/edit/delete cards, start studying or cramming, make a quiz, switch subject, or change settings, DO IT with the right tool. Use list_cards for ids before editing/deleting. For a quiz covering the whole syllabus, call list_chapters, then create_quiz with allChapters:true and perChapter 1-2; set save:true with a descriptive name when the user wants to keep or 'save it to a module'." : "") +
         (context ? `\nThis chat is about: ${context}\nKeep your help focused on that.` : "") +
         " Answer clearly and use markdown when helpful. For any math, ALWAYS use LaTeX — $...$ inline and $$...$$ for displayed equations; for multi-step math, show each step in detail (don't give one-line answers). Always reply in English." };
       const work = [sys, ...visible];
@@ -3944,6 +4010,12 @@ export default function App() {
     switchSubject: (s) => { if (SUBJECTS[s]) setSubject(s); },
     startStudy: (mode) => { commit((d) => ({ ...d, session: null })); setSession({ cram: mode === "cram" }); },
     playQuiz: (questions) => { setAgentQuiz(questions); setSubview("agentquiz"); },
+    getCourse: () => subjectCourse(subject, cards),
+    saveQuiz: (name, questions) => {
+      const id = uid();
+      commit((d) => ({ ...d, savedQuizzes: [{ id, subject, name: String(name || "Saved quiz"), questions, created: Date.now() }, ...(d.savedQuizzes || [])] }));
+      return { id };
+    },
   };
 
   // ── SRS session ──
@@ -4453,6 +4525,30 @@ export default function App() {
                   </button>
                 ))}
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Saved quizzes — shared across every subject (incl. future ones) */}
+        {tab === "practice" && (data.savedQuizzes || []).some((qz) => qz.subject === subject) && (
+          <div className="mt-6">
+            <div className="flex items-center gap-2 mb-2.5">
+              <span className="text-xs font-semibold uppercase tracking-wide text-stone-400">Saved quizzes</span>
+              <div className="h-px flex-1 bg-stone-200" />
+              <span className="text-[10px] text-stone-300">made with the AI tutor</span>
+            </div>
+            <div className="space-y-2">
+              {(data.savedQuizzes || []).filter((qz) => qz.subject === subject).map((qz) => (
+                <div key={qz.id} className="flex items-center gap-3 rounded-2xl border border-stone-200 bg-white p-3.5">
+                  <div className="w-9 h-9 rounded-xl bg-violet-600 text-white flex items-center justify-center shrink-0"><ListChecks size={16} /></div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-stone-800 text-sm truncate">{qz.name}</div>
+                    <div className="text-xs text-stone-400">{qz.questions.length} questions · {new Set(qz.questions.map((q) => q.section)).size} chapters</div>
+                  </div>
+                  <button onClick={() => agentActions.playQuiz(qz.questions)} className="shrink-0 inline-flex items-center gap-1 rounded-lg bg-teal-600 text-white px-3 py-1.5 text-xs font-medium hover:bg-teal-700"><Play size={13} /> Play</button>
+                  <button onClick={() => commit((d) => ({ ...d, savedQuizzes: (d.savedQuizzes || []).filter((x) => x.id !== qz.id) }))} title="Delete" className="shrink-0 text-stone-300 hover:text-rose-500"><Trash2 size={15} /></button>
+                </div>
+              ))}
             </div>
           </div>
         )}
