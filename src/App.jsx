@@ -773,6 +773,26 @@ function Markdown({ text, className = "" }) {
     const h = line.match(/^(#{1,6})\s+(.*)$/);
     if (h) { blocks.push(<div key={blocks.length} className="font-semibold mt-1.5 mb-0.5">{mdInline(h[2], blocks.length + "-")}</div>); i++; continue; }
     if (isHr(line)) { blocks.push(<hr key={blocks.length} className="my-2 border-stone-200" />); i++; continue; }
+    // Markdown tables: a header row, a |---|---| separator, then body rows.
+    const isTableSep = (l) => /^[\s|:-]+$/.test(l) && l.includes("|") && l.includes("-");
+    if (line.includes("|") && i + 1 < lines.length && isTableSep(lines[i + 1])) {
+      const cells = (l) => l.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim());
+      const header = cells(line);
+      const aligns = cells(lines[i + 1]).map((s) => (s.startsWith(":") && s.endsWith(":")) ? "center" : s.endsWith(":") ? "right" : "left");
+      const al = (j) => aligns[j] === "center" ? "text-center" : aligns[j] === "right" ? "text-right" : "text-left";
+      i += 2;
+      const rows = [];
+      while (i < lines.length && lines[i].includes("|") && lines[i].trim() !== "" && !isHr(lines[i])) { rows.push(cells(lines[i])); i++; }
+      blocks.push(
+        <div key={blocks.length} className="my-1.5 overflow-x-auto">
+          <table className="w-full text-[0.92em] border-collapse">
+            <thead><tr>{header.map((c, j) => <th key={j} className={`border border-stone-300 px-2 py-1 font-semibold bg-black/5 ${al(j)}`}>{mdInline(c, blocks.length + "-h" + j + "-")}</th>)}</tr></thead>
+            <tbody>{rows.map((r, ri) => <tr key={ri}>{r.map((c, j) => <td key={j} className={`border border-stone-200 px-2 py-1 ${al(j)}`}>{mdInline(c, blocks.length + "-" + ri + "-" + j + "-")}</td>)}</tr>)}</tbody>
+          </table>
+        </div>
+      );
+      continue;
+    }
     if (isItem(line)) {
       const ordered = /^\s*\d+\./.test(line); const items = [];
       while (i < lines.length && isItem(lines[i])) {
