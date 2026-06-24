@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import {
   Brain, Target, Settings, ArrowLeft, Check, X, Plus, Globe, Trophy,
-  ChevronRight, Hash, Calendar, Clock, Users, MessageSquare, Smile,
+  ChevronRight, ChevronLeft, Hash, Calendar, Clock, Users, MessageSquare, Smile,
   GraduationCap, User, CheckSquare, FileText, Languages, ArrowLeftRight,
   RotateCcw, Pencil, ClipboardPaste, Loader2, AlertCircle, BookOpen,
   Shuffle, Sparkles, Search, Trash2, RefreshCw, ListChecks, Layers, Moon, Sun,
@@ -3131,29 +3131,85 @@ function checkAns(input, p) {
   return false;
 }
 
+// Plain-text preview of a LaTeX question, for the browse list.
+function qPreview(q) {
+  return String(q || "")
+    .replace(/\\text\s*\{/g, "").replace(/\\[a-zA-Z]+/g, "").replace(/[{}\\$]/g, "")
+    .replace(/\s+/g, " ").trim();
+}
+
 function SolveSet({ problems, onGame }) {
-  const [order, setOrder] = useState(() => shuffle(problems.map((_, i) => i)));
+  const N = problems.length;
   const [pos, setPos] = useState(0);
   const [input, setInput] = useState("");
   const [attempts, setAttempts] = useState(0);
   const [status, setStatus] = useState(null); // wrong | correct
   const [revealed, setRevealed] = useState(false);
-  const [solved, setSolved] = useState(0);
-  const p = problems[order[pos % order.length]];
+  const [solvedIds, setSolvedIds] = useState(() => new Set());
+  const [showList, setShowList] = useState(false);
+  const p = problems[pos];
 
+  function reset() { setInput(""); setAttempts(0); setStatus(null); setRevealed(false); }
+  function goTo(np) { setPos((np + N) % N); reset(); setShowList(false); }
   function submit() {
     if (!input.trim() || revealed || status === "correct" || p.revealOnly) return;
-    if (checkAns(input, p)) { setStatus("correct"); setSolved((s) => s + 1); onGame && onGame("quizAnswer", { ok: true, mult: 1.3 }); }
+    if (checkAns(input, p)) { setStatus("correct"); setSolvedIds((s) => new Set(s).add(pos)); onGame && onGame("quizAnswer", { ok: true, mult: 1.3 }); }
     else { setAttempts((a) => a + 1); setStatus("wrong"); }
   }
-  function next() { setPos((x) => x + 1); setInput(""); setAttempts(0); setStatus(null); setRevealed(false); if ((pos + 1) % order.length === 0) setOrder(shuffle(problems.map((_, i) => i))); }
   const done = revealed || status === "correct";
 
+  // ── Browse all questions, grouped by topic ──
+  if (showList) {
+    const groups = [];
+    problems.forEach((pr, i) => {
+      let g = groups.find((x) => x.topic === pr.topic);
+      if (!g) { g = { topic: pr.topic, items: [] }; groups.push(g); }
+      g.items.push(i);
+    });
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <button onClick={() => setShowList(false)} className="inline-flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-800"><ArrowLeft size={15} /> Back to solving</button>
+          <span className="text-xs text-stone-400">{solvedIds.size}/{N} solved</span>
+        </div>
+        {groups.map((g) => (
+          <div key={g.topic}>
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-xs font-semibold uppercase tracking-wide text-teal-600">{g.topic}</span>
+              <div className="h-px flex-1 bg-stone-200" />
+              <span className="text-[10px] text-stone-300">{g.items.filter((i) => solvedIds.has(i)).length}/{g.items.length}</span>
+            </div>
+            <div className="rounded-2xl border border-stone-200 bg-white divide-y divide-stone-100 overflow-hidden">
+              {g.items.map((i) => {
+                const isSolved = solvedIds.has(i);
+                const isCurrent = i === pos;
+                return (
+                  <button key={i} onClick={() => goTo(i)}
+                    className={`w-full flex items-center gap-3 px-3.5 py-2.5 text-left hover:bg-stone-50 ${isCurrent ? "bg-teal-50/70" : ""}`}>
+                    <span className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${isSolved ? "bg-emerald-500 text-white" : problems[i].revealOnly ? "border border-sky-300 text-sky-400" : "border border-stone-300 text-stone-300"}`}>
+                      {isSolved ? <Check size={12} /> : problems[i].revealOnly ? <Lightbulb size={10} /> : null}
+                    </span>
+                    <span className="flex-1 min-w-0 text-sm text-stone-700 truncate">{qPreview(problems[i].q)}</span>
+                    {isCurrent && <span className="shrink-0 text-[10px] font-medium text-teal-600">current</span>}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // ── Solve a single problem ──
   return (
     <div className="space-y-3">
-      <div className="flex justify-between text-xs text-stone-400">
+      <div className="flex items-center justify-between text-xs">
         <span className="rounded-full bg-stone-100 px-2 py-0.5 text-stone-500">{p.topic}</span>
-        <span>solved {solved}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-stone-400">{pos + 1} / {N}</span>
+          <button onClick={() => setShowList(true)} className="inline-flex items-center gap-1 rounded-lg border border-stone-200 px-2 py-1 text-stone-500 hover:bg-stone-50"><ListChecks size={13} /> All questions</button>
+        </div>
       </div>
       <div className="rounded-2xl border border-stone-200 bg-white p-4">
         <div className="text-base text-stone-800"><Latex tex={p.q} block /></div>
@@ -3183,14 +3239,17 @@ function SolveSet({ problems, onGame }) {
       )}
       {done && (
         <AIExplain key={"ai" + pos} label="Explain step-by-step with AI" subjectLabel="Aptitude"
-          chatContext={`Aptitude problem (${p.topic}): ${p.q.replace(/\\text\{|\}|\\/g, " ")} — answer ${p.answer}`}
+          chatContext={`Aptitude problem (${p.topic}): ${qPreview(p.q)} — answer ${p.answer}`}
           run={() => groqChat([{ role: "user", content:
             "You are a patient aptitude tutor. Explain how to solve this problem step by step, in detail, so a beginner understands the WHY of each step. " +
             "Render ALL math in LaTeX — use $...$ inline and $$...$$ for displayed steps.\n\n" +
             "Problem (LaTeX): " + p.q + "\nCorrect answer: " + p.answer
           }], { temperature: 0.3, max_tokens: 700 })} />
       )}
-      <Btn className="w-full" onClick={next}>Next problem <ChevronRight size={15} /></Btn>
+      <div className="flex gap-2">
+        <Btn className="flex-1" onClick={() => goTo(pos - 1)}><ChevronLeft size={15} /> Previous</Btn>
+        <Btn kind="primary" className="flex-1" onClick={() => goTo(pos + 1)}>Next problem <ChevronRight size={15} /></Btn>
+      </div>
     </div>
   );
 }
