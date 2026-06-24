@@ -739,13 +739,55 @@ export const APTITUDE_PROBLEMS = [
     solution: "With $x$ members:\nCase 1 total $= x(2x) + x = 2x^2 + x$.\nCase 2 total $= x(x) + 2x = x^2 + 2x$.\nCase 1 exceeds Case 2 by $210$:\n$$(2x^2+x) - (x^2+2x) = 210 \\Rightarrow x^2 - x - 210 = 0$$\n$$(x-15)(x+14) = 0 \\Rightarrow x = \\boxed{15}$$ (reject $-14$)." },
 ];
 
+// Each formula: { name (plain label), tex (clean LaTeX), note? (when/how to use) }
 export const APTITUDE_FORMULAS = [
-  { topic: "Percentage", items: ["x\\% \\text{ of } y = \\frac{x}{100}\\,y", "\\text{A is }p\\%\\text{ more than B} \\Rightarrow \\text{B is }\\frac{p}{100+p}\\times100\\%\\text{ less}", "+x\\%\\text{ then }-x\\% \\Rightarrow \\text{net }-\\frac{x^2}{100}\\%", "\\text{price}\\uparrow r\\% \\Rightarrow \\text{cut use by }\\frac{r}{100+r}\\times100\\%"] },
-  { topic: "Ratio & Proportion", items: ["\\text{Fourth proportional: } a:b=c:x \\Rightarrow x=\\frac{bc}{a}", "\\text{Mean proportional of }a,b = \\sqrt{ab}", "\\frac{a}{p}=\\frac{b}{q}=\\frac{c}{r}=\\frac{a+b+c}{p+q+r}"] },
-  { topic: "Linear Equations", items: ["\\frac{1}{x}+\\frac{1}{y}=\\frac{x+y}{xy}", "\\text{Heads \\& legs: } x+y=H,\\ 2x+4y=L"] },
-  { topic: "Statistics", items: ["\\bar{x}=\\frac{\\sum f_i x_i}{\\sum f_i}", "\\text{Median}=L+\\frac{\\frac{n}{2}-cf}{f_m}\\times c", "\\text{Mode}=L+\\frac{f_m-f_1}{2f_m-f_1-f_2}\\times c", "\\text{Pie angle}=\\frac{\\text{value}}{\\text{total}}\\times360°"] },
-  { topic: "Binomial", items: ["(a+b)^n \\text{ has } n+1 \\text{ terms}", "T_{r+1}={}^nC_r\\,a^{n-r}b^{r}", "{}^nC_r=\\frac{n!}{r!(n-r)!}"] },
-  { topic: "Permutations & Combinations", items: ["{}^nP_r=\\frac{n!}{(n-r)!}\\ (\\text{order matters})", "{}^nC_r=\\frac{n!}{r!(n-r)!}\\ (\\text{order doesn't})", "{}^nC_r={}^nC_{n-r}", "\\text{Repeats: }\\frac{n!}{p!\\,q!\\cdots}", "\\text{Together} \\Rightarrow (n-1)!\\times2!", "{}^nP_r = r!\\cdot{}^nC_r", "{}^nC_x={}^nC_y \\Rightarrow x=y \\text{ or } x+y=n"] },
-  { topic: "Approximation & Indices", items: ["\\left(a^m\\right)^{n} = a^{mn}", "\\sqrt[n]{a^m} = a^{m/n}", "0<a<1 \\Rightarrow a^3 < a^2 < a", "\\text{Mixed recurring: } 0.a\\overline{bc} = \\frac{\\,abc - a\\,}{990}"] },
+  { topic: "Percentage", items: [
+    { name: "x% of y", tex: "x\\% \\text{ of } y = \\frac{x}{100}\\times y", note: "“of” means multiply." },
+    { name: "What % is A of B", tex: "\\frac{A}{B}\\times100\\%" },
+    { name: "p% more → how much % less", tex: "\\frac{p}{100+p}\\times100\\%", note: "A is p% more than B ⇒ B is this much % less than A. (+50% ⇒ 33.33% less)" },
+    { name: "Up x% then down x%", tex: "\\text{net} = -\\frac{x^2}{100}\\%", note: "Always a small net loss. (±10% ⇒ 1% loss)" },
+    { name: "Price rises r% → cut consumption", tex: "\\frac{r}{100+r}\\times100\\%", note: "Reduce use by this to keep spending fixed. (+25% ⇒ cut 20%)" },
+    { name: "Cost price ↔ selling price", tex: "SP = CP\\times\\frac{100 \\pm \\text{profit/loss}\\%}{100}", note: "+ for profit, − for loss. Rearrange to find CP from SP." },
+  ] },
+  { topic: "Ratio & Proportion", items: [
+    { name: "Fourth proportional", tex: "a:b = c:x \\Rightarrow x = \\frac{bc}{a}" },
+    { name: "Mean proportional", tex: "x = \\sqrt{ab}", note: "The x with a:x = x:b." },
+    { name: "Theorem of equal ratios", tex: "\\frac{a}{p}=\\frac{b}{q}=\\frac{c}{r}=\\frac{a+b+c}{p+q+r}", note: "Add the tops, add the bottoms." },
+    { name: "Combining ratios", tex: "A{:}B \\text{ and } B{:}C \\;\\to\\; A{:}B{:}C", note: "Scale both so the shared term (B) matches, then read across." },
+    { name: "Split a total in a : b : c", tex: "\\text{part} = \\frac{\\text{its share}}{\\text{sum of shares}}\\times \\text{total}" },
+  ] },
+  { topic: "Linear Equations", items: [
+    { name: "Sum of reciprocals", tex: "\\frac{1}{x}+\\frac{1}{y} = \\frac{x+y}{xy}", note: "Use when you know x+y and xy." },
+    { name: "Heads & legs", tex: "x+y = H,\\quad 2x+4y = L", note: "x = 2-legged, y = 4-legged; solve the pair." },
+    { name: "Sum of n consecutive integers", tex: "\\text{sum} = n\\times(\\text{middle term})", note: "Centre them on the middle value — the ± terms cancel." },
+  ] },
+  { topic: "Statistics", items: [
+    { name: "Mean (raw data)", tex: "\\bar{x} = \\frac{\\sum x_i}{n}" },
+    { name: "Mean (grouped)", tex: "\\bar{x} = \\frac{\\sum f_i x_i}{\\sum f_i}", note: "x_i = midpoint of each class." },
+    { name: "Median (grouped)", tex: "L + \\frac{\\frac{n}{2}-cf}{f_m}\\times c", note: "Median class is where n/2 falls. L = its lower limit, cf = cumulative freq before it, f_m = its freq, c = class width." },
+    { name: "Mode (grouped)", tex: "L + \\frac{f_m-f_1}{2f_m-f_1-f_2}\\times c", note: "Modal class = highest freq. f_1, f_2 = freq of the classes before & after." },
+    { name: "Pie-slice angle", tex: "\\frac{\\text{value}}{\\text{total}}\\times360°", note: "Reverse it to get a value from a known angle." },
+  ] },
+  { topic: "Binomial", items: [
+    { name: "Number of terms", tex: "(a+b)^n \\;\\Rightarrow\\; n+1 \\text{ terms}" },
+    { name: "General term", tex: "T_{r+1} = {}^nC_r\\,a^{\\,n-r}b^{\\,r}", note: "r is one LESS than the term number you want." },
+    { name: "Binomial coefficient", tex: "{}^nC_r = \\frac{n!}{r!\\,(n-r)!}" },
+    { name: "Middle term(s)", tex: "n\\text{ even}: \\tfrac{n}{2}{+}1\\text{th}\\quad n\\text{ odd}: \\tfrac{n+1}{2}\\,\\&\\,\\tfrac{n+3}{2}\\text{th}" },
+  ] },
+  { topic: "Permutations & Combinations", items: [
+    { name: "Permutations — order matters", tex: "{}^nP_r = \\frac{n!}{(n-r)!}" },
+    { name: "Combinations — order doesn’t", tex: "{}^nC_r = \\frac{n!}{r!\\,(n-r)!}" },
+    { name: "Link between them", tex: "{}^nP_r = r!\\cdot{}^nC_r" },
+    { name: "Symmetry", tex: "{}^nC_r = {}^nC_{n-r}" },
+    { name: "Two equal combinations", tex: "{}^nC_x = {}^nC_y \\Rightarrow x=y \\text{ or } x+y=n", note: "Gives two possible values of n." },
+    { name: "Arrangements with repeats", tex: "\\frac{n!}{p!\\,q!\\cdots}", note: "Divide by the factorial of each repeated letter’s count." },
+    { name: "Items always together", tex: "(n-1)!\\times(\\text{block size})!", note: "Glue them into one block, then arrange." },
+  ] },
+  { topic: "Approximation & Indices", items: [
+    { name: "Power of a power", tex: "\\left(a^m\\right)^{n} = a^{mn}" },
+    { name: "Root as a power", tex: "\\sqrt[n]{a^m} = a^{m/n}" },
+    { name: "Powers of a proper fraction", tex: "0<a<1 \\Rightarrow a^3 < a^2 < a", note: "Higher power ⇒ smaller value." },
+    { name: "Mixed recurring decimal", tex: "0.a\\overline{bc} = \\frac{abc - a}{990}", note: "One 9 per repeating digit, one 0 per non-repeating digit." },
+  ] },
 ];
 

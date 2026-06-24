@@ -3197,12 +3197,23 @@ function SolveSet({ problems, onGame }) {
 
 function FormulaSheet() {
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      <p className="text-xs text-stone-400">Each entry: <span className="text-stone-500 font-medium">what it's for</span> → the formula → when to use it.</p>
       {APTITUDE_FORMULAS.map((g) => (
         <div key={g.topic}>
-          <div className="flex items-center gap-2 mb-2"><span className="text-xs font-semibold uppercase tracking-wide text-stone-400">{g.topic}</span><div className="h-px flex-1 bg-stone-200" /></div>
-          <div className="rounded-2xl border border-stone-200 bg-white p-4 space-y-2.5">
-            {g.items.map((t, i) => <div key={i} className="overflow-x-auto text-stone-800"><Latex tex={t} block /></div>)}
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-teal-600">{g.topic}</span>
+            <div className="h-px flex-1 bg-stone-200" />
+            <span className="text-[10px] text-stone-300">{g.items.length}</span>
+          </div>
+          <div className="rounded-2xl border border-stone-200 bg-white divide-y divide-stone-100 overflow-hidden">
+            {g.items.map((it, i) => (
+              <div key={i} className="px-4 py-3">
+                <div className="text-sm font-semibold text-stone-700">{it.name}</div>
+                <div className="mt-1.5 overflow-x-auto text-stone-800 text-[1.05em]"><Latex tex={it.tex} block /></div>
+                {it.note && <div className="mt-1.5 text-xs text-stone-500 leading-snug">{it.note}</div>}
+              </div>
+            ))}
           </div>
         </div>
       ))}
