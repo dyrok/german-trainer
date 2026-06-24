@@ -487,7 +487,7 @@ function playSfx(type) {
 function freshData() {
   return { v: 2, subject: "german", cards: seedAll(),
     settings: { newPerDay: 20 }, daily: { day: todayStr(), newDone: 0 }, streak: { count: 0, lastDay: null }, session: null,
-    game: defaultGame(), profile: { name: "", email: "" } };
+    game: defaultGame(), profile: { name: "", email: "" }, aptSolved: {} };
 }
 
 // Upgrade older saved data: tag legacy cards german, merge new seed cards, ensure game/profile.
@@ -505,7 +505,7 @@ function migrate(d) {
         flags: { ...(d.game.flags || {}) } }
     : dg;
   return { ...d, v: 2, subject: d.subject || "german", cards, streak: d.streak || { count: 0, lastDay: null }, session: d.session || null,
-    game, profile: d.profile || { name: "", email: "" } };
+    game, profile: d.profile || { name: "", email: "" }, aptSolved: d.aptSolved || {} };
 }
 
 // Build a randomized quiz in Exam format from a {q,o,c} bank (options shuffled each round)
@@ -3137,23 +3137,32 @@ function qPreview(q) {
     .replace(/\\text\s*\{/g, "").replace(/\\[a-zA-Z]+/g, "").replace(/[{}\\$]/g, "")
     .replace(/\s+/g, " ").trim();
 }
+// Stable key for a problem (hash of its question) so solved-progress survives
+// reordering/adding problems. Persisted in data.aptSolved.
+function aptKey(q) {
+  let h = 0; const s = String(q);
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return "p" + (h >>> 0).toString(36);
+}
 
-function SolveSet({ problems, onGame }) {
+function SolveSet({ problems, onGame, solved = {}, onSolved }) {
   const N = problems.length;
   const [pos, setPos] = useState(0);
   const [input, setInput] = useState("");
   const [attempts, setAttempts] = useState(0);
   const [status, setStatus] = useState(null); // wrong | correct
   const [revealed, setRevealed] = useState(false);
-  const [solvedIds, setSolvedIds] = useState(() => new Set());
   const [showList, setShowList] = useState(false);
   const p = problems[pos];
+  const kOf = (i) => aptKey(problems[i].q);
+  const isSolved = (i) => !!solved[kOf(i)];
+  const solvedCount = problems.reduce((n, _, i) => n + (isSolved(i) ? 1 : 0), 0);
 
   function reset() { setInput(""); setAttempts(0); setStatus(null); setRevealed(false); }
   function goTo(np) { setPos((np + N) % N); reset(); setShowList(false); }
   function submit() {
     if (!input.trim() || revealed || status === "correct" || p.revealOnly) return;
-    if (checkAns(input, p)) { setStatus("correct"); setSolvedIds((s) => new Set(s).add(pos)); onGame && onGame("quizAnswer", { ok: true, mult: 1.3 }); }
+    if (checkAns(input, p)) { setStatus("correct"); onSolved && onSolved(aptKey(p.q)); onGame && onGame("quizAnswer", { ok: true, mult: 1.3 }); }
     else { setAttempts((a) => a + 1); setStatus("wrong"); }
   }
   const done = revealed || status === "correct";
@@ -3170,24 +3179,24 @@ function SolveSet({ problems, onGame }) {
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <button onClick={() => setShowList(false)} className="inline-flex items-center gap-1.5 text-sm text-stone-500 hover:text-stone-800"><ArrowLeft size={15} /> Back to solving</button>
-          <span className="text-xs text-stone-400">{solvedIds.size}/{N} solved</span>
+          <span className="text-xs text-stone-400">{solvedCount}/{N} solved</span>
         </div>
         {groups.map((g) => (
           <div key={g.topic}>
             <div className="flex items-center gap-2 mb-2">
               <span className="text-xs font-semibold uppercase tracking-wide text-teal-600">{g.topic}</span>
               <div className="h-px flex-1 bg-stone-200" />
-              <span className="text-[10px] text-stone-300">{g.items.filter((i) => solvedIds.has(i)).length}/{g.items.length}</span>
+              <span className="text-[10px] text-stone-300">{g.items.filter((i) => isSolved(i)).length}/{g.items.length}</span>
             </div>
             <div className="rounded-2xl border border-stone-200 bg-white divide-y divide-stone-100 overflow-hidden">
               {g.items.map((i) => {
-                const isSolved = solvedIds.has(i);
+                const done2 = isSolved(i);
                 const isCurrent = i === pos;
                 return (
                   <button key={i} onClick={() => goTo(i)}
                     className={`w-full flex items-center gap-3 px-3.5 py-2.5 text-left hover:bg-stone-50 ${isCurrent ? "bg-teal-50/70" : ""}`}>
-                    <span className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${isSolved ? "bg-emerald-500 text-white" : problems[i].revealOnly ? "border border-sky-300 text-sky-400" : "border border-stone-300 text-stone-300"}`}>
-                      {isSolved ? <Check size={12} /> : problems[i].revealOnly ? <Lightbulb size={10} /> : null}
+                    <span className={`shrink-0 w-5 h-5 rounded-full flex items-center justify-center ${done2 ? "bg-emerald-500 text-white" : problems[i].revealOnly ? "border border-sky-300 text-sky-400" : "border border-stone-300 text-stone-300"}`}>
+                      {done2 ? <Check size={12} /> : problems[i].revealOnly ? <Lightbulb size={10} /> : null}
                     </span>
                     <span className="flex-1 min-w-0 text-sm text-stone-700 truncate">{qPreview(problems[i].q)}</span>
                     {isCurrent && <span className="shrink-0 text-[10px] font-medium text-teal-600">current</span>}
@@ -3205,10 +3214,13 @@ function SolveSet({ problems, onGame }) {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between text-xs">
-        <span className="rounded-full bg-stone-100 px-2 py-0.5 text-stone-500">{p.topic}</span>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="rounded-full bg-stone-100 px-2 py-0.5 text-stone-500 shrink-0">{p.topic}</span>
+          {isSolved(pos) && <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 text-emerald-600 px-2 py-0.5 font-medium shrink-0"><Check size={11} /> Solved</span>}
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
           <span className="text-stone-400">{pos + 1} / {N}</span>
-          <button onClick={() => setShowList(true)} className="inline-flex items-center gap-1 rounded-lg border border-stone-200 px-2 py-1 text-stone-500 hover:bg-stone-50"><ListChecks size={13} /> All questions</button>
+          <button onClick={() => setShowList(true)} className="inline-flex items-center gap-1 rounded-lg border border-stone-200 px-2 py-1 text-stone-500 hover:bg-stone-50"><ListChecks size={13} /> All · {solvedCount}/{N}</button>
         </div>
       </div>
       <div className="rounded-2xl border border-stone-200 bg-white p-4">
@@ -4014,7 +4026,7 @@ export default function App() {
     else if (subview === "reactquiz") { title = "React Quiz"; content = <Exam make={() => makeReactQuiz(15)} subjectLabel="React" onAddMissed={addMissed} onGame={gameEvent} />; }
     else if (subview === "dsaquiz")   { title = "DSA Quiz"; content = <Exam make={() => makeDsaQuiz(15)} subjectLabel="DSA" onAddMissed={addMissed} onGame={gameEvent} />; }
     else if (subview === "aptquiz")   { title = "Aptitude Quiz"; content = <Exam make={() => makeAptitudeQuiz(15)} subjectLabel="Aptitude" onAddMissed={addMissed} onGame={gameEvent} />; }
-    else if (subview === "aptsolve")  { title = "Solve Problems"; content = <SolveSet problems={APTITUDE_PROBLEMS} onGame={gameEvent} />; }
+    else if (subview === "aptsolve")  { title = "Solve Problems"; content = <SolveSet problems={APTITUDE_PROBLEMS} onGame={gameEvent} solved={data.aptSolved || {}} onSolved={(k) => commit((d) => ({ ...d, aptSolved: { ...(d.aptSolved || {}), [k]: 1 } }))} />; }
     else if (subview === "aptformulas") { title = "Formula Sheet"; content = <FormulaSheet />; }
     else if (subview === "viz:percent") { title = "Percentage"; content = <PercentBar />; }
     else if (subview === "viz:ratio")   { title = "Ratio Split"; content = <RatioBars />; }
@@ -4293,7 +4305,7 @@ export default function App() {
             <div>
               <div className="flex items-center gap-2 mb-2.5"><span className="text-xs font-semibold uppercase tracking-wide text-stone-400">Solve &amp; study</span><div className="h-px flex-1 bg-stone-200" /></div>
               <div className="grid grid-cols-2 gap-2.5">
-                <Tile label="Solve problems" sub={`${APTITUDE_PROBLEMS.length} worked · type the answer`} icon={Calculator} onClick={() => setSubview("aptsolve")} />
+                <Tile label="Solve problems" sub={`${Object.keys(data.aptSolved || {}).length}/${APTITUDE_PROBLEMS.length} solved · type the answer`} icon={Calculator} onClick={() => setSubview("aptsolve")} />
                 <Tile label="Formula sheet" sub="every formula, in LaTeX" icon={BookText} onClick={() => setSubview("aptformulas")} />
                 <Tile label="Aptitude Quiz" sub={`${APTITUDE_QUIZ.length} MCQs (DILR)`} icon={ListChecks} onClick={() => setSubview("aptquiz")} />
                 <Tile label="Timed Sprint" sub="MCQs against the clock" icon={Clock} onClick={() => setSubview("timed")} />
